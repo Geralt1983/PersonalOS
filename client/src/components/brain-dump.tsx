@@ -258,7 +258,7 @@ export function BrainDump({ entries, tags, onAdd, onDelete, onUpdate, onArchive,
                 onChange={(e) => setTextInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Add thought..."
-                className="flex-1 bg-white/5 border-white/10 text-sm placeholder:text-gray-600 focus:border-cyan-500/50"
+                className="flex-1 bg-white/5 border-white/10 text-base placeholder:text-gray-600 focus:border-cyan-500/50"
                 data-testid="input-brain-dump"
               />
               

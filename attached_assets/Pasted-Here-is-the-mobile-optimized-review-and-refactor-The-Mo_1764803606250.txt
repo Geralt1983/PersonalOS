@@ -1,0 +1,257 @@
+Here is the mobile-optimized review and refactor.
+The Mobile Review
+The Problem: The current code assumes a desktop "dashboard" view. On a phone (especially with a newborn in one arm), the VitalityGauge takes up the entire first screen, forcing you to scroll to do anything useful.
+The Fix:
+ * Thumb Zone Priority: We will move The Anchor (Habits) to the top on mobile so you can toggle them instantly.
+ * Responsive Orb: The Vitality Gauge is too big for a phone screen; we will scale the physics orb down by 40% on mobile.
+ * Input Handling: We need to ensure the BrainDump input doesn't get hidden behind the mobile keyboard.
+1. The Layout: app/page.tsx
+Update this file. We switch to a flex-col-reverse logic or re-order specifically for mobile so high-frequency touch targets are lower (easier to reach).
+"use client"
+
+import { VitalityGauge } from "@/components/vitality-gauge"
+import { TheConstruct } from "@/components/the-construct"
+import { BrainDump } from "@/components/brain-dump"
+import { TheAnchor } from "@/components/the-anchor"
+
+export default function SanctuaryOS() {
+  return (
+    <div className="min-h-[100dvh] bg-background text-foreground font-sans selection:bg-cyan-500/30 overflow-x-hidden">
+      
+      {/* Mobile Header (Compact) */}
+      <div className="px-4 pt-6 md:px-8 md:pt-8 flex justify-between items-end mb-6">
+        <div>
+            <h1 className="text-2xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-white/50">
+            Sanctuary OS
+            </h1>
+            <p className="text-xs md:text-sm text-muted-foreground uppercase tracking-widest">Jeremy // One-Hand Mode</p>
+        </div>
+      </div>
+
+      <main className="max-w-7xl mx-auto px-4 md:px-8 pb-10 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        {/* ORDERING: On Mobile, we want quick actions (Anchor) visible immediately. 
+            On Desktop, we want the Gauge as the hero. */}
+        
+        {/* LEFT COL (Desktop) / BOTTOM (Mobile) */}
+        <div className="lg:col-span-7 lg:h-[600px] flex flex-col order-2 lg:order-1">
+           <VitalityGauge />
+        </div>
+
+        {/* RIGHT COL (Desktop) / TOP (Mobile) */}
+        <div className="lg:col-span-5 flex flex-col gap-6 order-1 lg:order-2">
+          {/* High frequency toggles first */}
+          <TheAnchor /> 
+          
+          <div className="flex flex-col md:grid md:grid-cols-2 gap-6">
+             {/* Brain Dump needs to be accessible */}
+             <div className="order-1 md:order-2">
+                <BrainDump />
+             </div>
+             {/* Long term projects last on mobile */}
+             <div className="order-2 md:order-1">
+                <TheConstruct />
+             </div>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  )
+}
+
+2. Responsive Physics: components/vitality-gauge.tsx
+Update this file. We add w-40 h-40 for mobile vs md:w-64 md:h-64 for desktop so the breathing orb fits on an iPhone screen without dominating it.
+"use client"
+
+import { useState } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { motion, AnimatePresence } from "framer-motion"
+
+type EnergyLevel = "low" | "medium" | "high"
+
+export function VitalityGauge() {
+  const [currentEnergy, setCurrentEnergy] = useState<EnergyLevel>("medium")
+
+  // Animation variants remain the same...
+  const breathingVariants = {
+    low: { scale: [1, 1.05, 1], opacity: [0.5, 0.8, 0.5] },
+    medium: { scale: [1, 1.02, 1], opacity: [0.8, 1, 0.8] },
+    high: { scale: [1, 1.1, 1], opacity: [0.9, 1, 0.9] },
+  }
+
+  const breathingTransition = {
+    low: { duration: 6, repeat: Infinity, ease: "easeInOut" },
+    medium: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+    high: { duration: 0.5, repeat: Infinity, ease: "easeInOut" },
+  }
+
+  const handleCycle = () => {
+    setCurrentEnergy(prev => prev === "low" ? "medium" : prev === "medium" ? "high" : "low")
+  }
+
+  return (
+    <Card className="h-[400px] lg:h-full border border-white/10 bg-black/40 backdrop-blur-xl relative overflow-hidden flex flex-col transition-all">
+       {/* Background Dynamic Gradient */}
+       <motion.div 
+         className="absolute inset-0 opacity-20 pointer-events-none"
+         animate={{
+            background: currentEnergy === 'low' 
+                ? 'radial-gradient(circle at 50% 50%, #06b6d4 0%, transparent 70%)' 
+                : currentEnergy === 'medium'
+                ? 'radial-gradient(circle at 50% 50%, #3b82f6 0%, transparent 70%)'
+                : 'radial-gradient(circle at 50% 50%, #a855f7 0%, transparent 70%)'
+         }}
+         transition={{ duration: 1.5 }}
+       />
+
+      <CardHeader className="pb-2 z-10">
+         <div className="flex justify-between items-center">
+             <CardTitle className="text-sm md:text-xl font-medium text-gray-200 uppercase tracking-widest">Vitality Gauge</CardTitle>
+             <div className="h-2 w-2 rounded-full bg-green-500 shadow-[0_0_10px_#22c55e] animate-pulse" />
+         </div>
+      </CardHeader>
+      
+      <CardContent className="flex-1 flex flex-col gap-4 md:gap-8 z-10 items-center justify-center">
+        
+        {/* The Orb - Responsive Sizing */}
+        <motion.div 
+            onClick={handleCycle}
+            className="relative cursor-pointer"
+            whileTap={{ scale: 0.95 }}
+        >
+            {/* Mobile: w-40, Desktop: w-64 */}
+            <div className="w-40 h-40 md:w-64 md:h-64 rounded-full border border-white/5 flex items-center justify-center relative bg-black/20 shadow-2xl">
+                <motion.div 
+                    className={`absolute inset-0 rounded-full blur-2xl md:blur-3xl ${
+                        currentEnergy === 'low' ? 'bg-cyan-500/20' : 
+                        currentEnergy === 'medium' ? 'bg-blue-500/20' : 'bg-purple-500/30'
+                    }`}
+                    variants={breathingVariants}
+                    animate={currentEnergy}
+                    transition={breathingTransition[currentEnergy]}
+                />
+                
+                <div className="text-center relative z-10">
+                    <motion.div 
+                        key={currentEnergy} 
+                        initial={{ y: 10, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        className="text-3xl md:text-5xl font-black uppercase tracking-tighter text-white"
+                    >
+                        {currentEnergy}
+                    </motion.div>
+                </div>
+            </div>
+        </motion.div>
+
+        {/* Action Suggestion */}
+        <AnimatePresence mode="wait">
+            <motion.div 
+                key={currentEnergy}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="text-center px-4"
+            >
+                <div className="text-[10px] md:text-xs text-gray-500 uppercase tracking-widest mb-1 md:mb-2">Recommended Protocol</div>
+                <div className="text-base md:text-lg font-light text-cyan-100 leading-tight">
+                    {currentEnergy === 'low' && "Drop the guilt. Nap."}
+                    {currentEnergy === 'medium' && "Clean one room. Check email."}
+                    {currentEnergy === 'high' && "Sunroom: Install shelf brackets."}
+                </div>
+            </motion.div>
+        </AnimatePresence>
+
+      </CardContent>
+    </Card>
+  )
+}
+
+3. Mobile Input: components/brain-dump.tsx
+Update this file. We ensure the input field has text-base (16px) to prevent iOS from zooming in automatically when you tap it, and we improve the styling for touch.
+"use client"
+
+import { useState } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { motion, AnimatePresence } from "framer-motion"
+
+export function BrainDump() {
+  const [items, setItems] = useState([
+    { id: 1, text: "Buy sanding blocks 120 grit" },
+  ])
+  const [inputValue, setInputValue] = useState("")
+  const [isProcessing, setIsProcessing] = useState(false)
+
+  const addItem = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!inputValue.trim()) return
+    setItems([{ id: Date.now(), text: inputValue }, ...items])
+    setInputValue("")
+  }
+
+  const simulateAIProcessing = () => {
+    setIsProcessing(true)
+    setTimeout(() => {
+        setItems([]) 
+        setIsProcessing(false)
+    }, 2000)
+  }
+
+  return (
+    <Card className="border border-white/10 bg-black/40 backdrop-blur-xl h-full flex flex-col">
+      <CardHeader className="flex flex-row items-center justify-between pb-2 pt-4 px-4">
+        <CardTitle className="text-xs font-bold tracking-[0.2em] text-gray-500 uppercase">Brain Dump</CardTitle>
+        {items.length > 0 && (
+            <button 
+                onClick={simulateAIProcessing}
+                className="text-[10px] uppercase tracking-wider bg-cyan-900/30 border border-cyan-500/30 px-3 py-1.5 rounded-full text-cyan-400 transition-colors active:bg-cyan-500/20"
+            >
+                {isProcessing ? "Sorting..." : "Process AI"}
+            </button>
+        )}
+      </CardHeader>
+      
+      <CardContent className="space-y-4 px-4 pb-4 flex-1">
+        <form onSubmit={addItem} className="relative">
+            {/* MOBILE FIX: text-base prevents iOS zoom. 
+                py-3 makes touch target larger. 
+            */}
+            <input 
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-base text-white placeholder:text-gray-600 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/20 transition-all"
+                placeholder="Type or dictate..."
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                inputMode="text"
+            />
+            <div className="absolute right-3 top-3 text-gray-600 text-lg">🎤</div>
+        </form>
+
+        <ul className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+            <AnimatePresence mode="popLayout">
+                {items.map((item) => (
+                    <motion.li
+                        key={item.id}
+                        layout
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        className="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/5 active:bg-white/10 touch-manipulation"
+                    >
+                        <div className="w-2 h-2 rounded-full bg-cyan-500/50 flex-shrink-0" />
+                        <span className="text-sm text-gray-300 flex-1 leading-snug">{item.text}</span>
+                    </motion.li>
+                ))}
+            </AnimatePresence>
+            
+            {items.length === 0 && !isProcessing && (
+                <div className="text-center text-xs text-gray-700 py-6 italic">
+                    Capture the chaos.
+                </div>
+            )}
+        </ul>
+      </CardContent>
+    </Card>
+  )
+}
+

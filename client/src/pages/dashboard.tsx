@@ -292,7 +292,8 @@ export default function Dashboard() {
       </header>
 
       <main className="grid grid-cols-1 lg:grid-cols-5 gap-6 max-w-7xl mx-auto">
-        <div className="lg:col-span-3 flex flex-col gap-6">
+        {/* LEFT COL (Desktop) / BOTTOM (Mobile) - VitalityGauge */}
+        <div className="lg:col-span-3 flex flex-col gap-6 order-2 lg:order-1">
           <VitalityGauge
             energyLevel={data.energyState.level}
             streak={data.energyState.streak}
@@ -303,28 +304,34 @@ export default function Dashboard() {
           <EnergyHistory />
         </div>
 
-        <div className="lg:col-span-2 flex flex-col gap-6">
+        {/* RIGHT COL (Desktop) / TOP (Mobile) - High frequency toggles first */}
+        <div className="lg:col-span-2 flex flex-col gap-6 order-1 lg:order-2">
           <TheAnchor 
             anchors={anchorsForComponent} 
             onToggle={handleAnchorToggle} 
           />
           
-          <TheConstruct 
-            project={activeProject}
-            steps={stepsForComponent} 
-            onToggle={handleStepToggle}
-            onProjectChange={handleProjectChange}
-          />
-          
-          <BrainDump
-            entries={brainDumpEntriesFiltered}
-            tags={tags}
-            onAdd={handleAddBrainDump}
-            onDelete={handleDeleteBrainDump}
-            onUpdate={handleUpdateBrainDump}
-            onArchive={handleArchiveBrainDump}
-            onCreateTag={handleCreateTag}
-          />
+          <div className="flex flex-col md:grid md:grid-cols-2 gap-6">
+            <div className="order-1 md:order-2">
+              <BrainDump
+                entries={brainDumpEntriesFiltered}
+                tags={tags}
+                onAdd={handleAddBrainDump}
+                onDelete={handleDeleteBrainDump}
+                onUpdate={handleUpdateBrainDump}
+                onArchive={handleArchiveBrainDump}
+                onCreateTag={handleCreateTag}
+              />
+            </div>
+            <div className="order-2 md:order-1">
+              <TheConstruct 
+                project={activeProject}
+                steps={stepsForComponent} 
+                onToggle={handleStepToggle}
+                onProjectChange={handleProjectChange}
+              />
+            </div>
+          </div>
           
           <MomentumWidget 
             data={data.momentum} 

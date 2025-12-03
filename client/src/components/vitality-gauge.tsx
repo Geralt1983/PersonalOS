@@ -108,8 +108,8 @@ export function VitalityGauge({ energyLevel, streak, onEnergyChange, isUpdating 
       <CardHeader className="pb-4 z-10">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <CardTitle className="text-2xl font-bold tracking-tight text-gray-200" data-testid="text-vitality-title">Vitality Gauge</CardTitle>
-            <CardDescription className="text-base mt-1">System State</CardDescription>
+            <CardTitle className="text-xl md:text-2xl font-bold tracking-tight text-gray-200" data-testid="text-vitality-title">Vitality Gauge</CardTitle>
+            <CardDescription className="text-sm md:text-base mt-1">System State</CardDescription>
           </div>
           <motion.div 
             className="text-right"
@@ -118,13 +118,13 @@ export function VitalityGauge({ energyLevel, streak, onEnergyChange, isUpdating 
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: "spring", stiffness: 400, damping: 20 }}
           >
-            <div className={`text-3xl font-black ${config.color}`} data-testid="text-streak-count">{streak}</div>
+            <div className={`text-2xl md:text-3xl font-black ${config.color}`} data-testid="text-streak-count">{streak}</div>
             <div className="text-xs text-muted-foreground font-medium">day streak</div>
           </motion.div>
         </div>
       </CardHeader>
       
-      <CardContent className="flex-1 flex flex-col gap-6 z-10 items-center justify-center">
+      <CardContent className="flex-1 flex flex-col gap-4 md:gap-6 z-10 items-center justify-center">
         <motion.div 
           onClick={handleCycle}
           className="relative cursor-pointer"
@@ -132,7 +132,7 @@ export function VitalityGauge({ energyLevel, streak, onEnergyChange, isUpdating 
           whileTap={{ scale: 0.95 }}
           transition={{ type: "spring", stiffness: 400, damping: 25 }}
         >
-          <div className="w-56 h-56 rounded-full border border-white/5 flex items-center justify-center relative">
+          <div className="w-40 h-40 md:w-56 md:h-56 rounded-full border border-white/5 flex items-center justify-center relative">
             <motion.div 
               className={`absolute inset-0 rounded-full blur-2xl ${
                 energyLevel === 'low' ? 'bg-cyan-500/20' : 
