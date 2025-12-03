@@ -31,9 +31,22 @@ shared/
 └── schema.ts                     # TypeScript types and Zod schemas
 ```
 
-## Design System: Organic Steel
+## Design System: Organic Steel (Premium Edition)
 
-### Colors
+### P3 Color Space
+Uses Display P3 color gamut for richer, deeper colors on OLED displays (with sRGB fallbacks):
+- **P3 Steel Dark**: `color(display-p3 0.05 0.05 0.07)`
+- **P3 Nebula Cyan**: `color(display-p3 0.2 0.9 1)` - 25% more vibrant on supported displays
+- **P3 Nebula Blue**: `color(display-p3 0.2 0.6 1)`
+- **P3 Glow Purple**: `color(display-p3 0.6 0.3 1)`
+
+### Film Grain Texture
+Subtle 3% opacity fractal noise overlay on body background - prevents color banding and adds premium depth (anodized aluminum feel).
+
+### Glassmorphism
+Cards use `backdrop-filter: blur(20px)` with translucent backgrounds for premium glass effect.
+
+### Colors (sRGB Fallbacks)
 - **Steel Grays**: Deep charcoal backgrounds (#121212 to #1c1c1c)
 - **Nebula Accents**: Cyan (#22d3ee), Blue (#3b82f6), Purple (#8b5cf6)
 - **Glow Effects**: Soft box-shadows with nebula colors for active states
@@ -46,18 +59,42 @@ shared/
 - **Desktop**: 60/40 split (Vitality Gauge left, stacked modules right)
 - **Tablet/Mobile**: Single column, stacked layout
 
+## Physics-Based Animations (Framer Motion)
+
+### Vitality Gauge - Breathing Orb
+State-based breathing animations that feel organic:
+- **Low Energy**: 6-second slow breath, scale 1.05, subdued opacity
+- **Medium Energy**: 4-second medium breath, scale 1.02
+- **High Energy**: 0.5-second fast pulse, scale 1.1, full intensity
+
+### The Anchor - Spring Physics Toggles
+- Toggle switches use spring physics: `stiffness: 500, damping: 30`
+- `whileTap: { scale: 0.98 }` for tactile micro-feedback
+- Haptic feedback via `navigator.vibrate(10)` on mobile
+
+### Brain Dump - AnimatePresence
+- Smooth list item entry/exit with spring physics
+- Staggered animation delays for visual flow
+- Layout animations for reordering
+
+### Optimistic UI
+All state changes update instantly (optimistic), with smooth animations providing visual confirmation.
+
 ## Modules
 
 ### 1. Vitality Gauge (Hero)
 - Visual energy state selector with three levels: Low, Medium, High
+- **Breathing orb animation** with state-based timing
+- Dynamic radial gradient background
 - Smart task suggestions that adapt to current energy
 - Identity affirmations that validate current state
 - Streak counter for consistency tracking
 
 ### 2. The Anchor
 - 3 daily stabilizing habits: Hydrate, No Phone in Bed, Read Physics
-- Metallic toggle switches with cyan glow when active
-- Progress indicator (X/3 complete)
+- **Physics-based toggle switches** with spring animations
+- Cyan glow effect when active
+- Progress indicator (X/3 complete) with spring animation
 
 ### 3. The Construct (Project Tracker)
 - **Multi-project support**: Create and switch between multiple projects
@@ -67,6 +104,7 @@ shared/
 
 ### 4. Brain Dump (Enhanced)
 - Low-friction thought capture with voice input (Web Speech API)
+- **AnimatePresence** for smooth list transitions
 - **Tagging system**: Create and assign tags to organize thoughts
 - **Category auto-detection**: Ideas, Tasks, Reminders, Notes (with user override)
 - **Search functionality**: Filter thoughts by text content
@@ -154,4 +192,4 @@ npm run dev
 - Dark mode only (optimized for nighttime use)
 - Anti-productivity messaging (never guilt-trip)
 - Validating tone throughout the interface
-- Calm, measured animations
+- Physics-based, calm animations
