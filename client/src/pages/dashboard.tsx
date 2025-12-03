@@ -4,6 +4,7 @@ import { TheAnchor } from "@/components/the-anchor";
 import { TheConstruct } from "@/components/the-construct";
 import { BrainDump } from "@/components/brain-dump";
 import { MomentumWidget } from "@/components/momentum-widget";
+import { EnergyHistory } from "@/components/energy-history";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { EnergyLevel, MomentumData } from "@shared/schema";
@@ -61,6 +62,12 @@ export default function Dashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/sanctuary"] });
+      queryClient.invalidateQueries({ 
+        predicate: (query) => 
+          Array.isArray(query.queryKey) && 
+          query.queryKey[0] === "/api/energy/logs"
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/energy/patterns"] });
     },
   });
 
@@ -198,13 +205,15 @@ export default function Dashboard() {
       </header>
 
       <main className="grid grid-cols-1 lg:grid-cols-5 gap-6 max-w-7xl mx-auto">
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-3 flex flex-col gap-6">
           <VitalityGauge
             energyLevel={data.energyState.level}
             streak={data.energyState.streak}
             onEnergyChange={handleEnergyChange}
             isUpdating={logEnergyMutation.isPending}
           />
+          
+          <EnergyHistory />
         </div>
 
         <div className="lg:col-span-2 flex flex-col gap-6">
