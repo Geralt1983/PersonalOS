@@ -11,6 +11,13 @@ export default {
         sm: ".1875rem", /* 3px */
       },
       colors: {
+        // Organic Steel Palette
+        "steel-dark": "hsl(var(--steel-dark) / <alpha-value>)",
+        "steel-medium": "hsl(var(--steel-medium) / <alpha-value>)",
+        "steel-light": "hsl(var(--steel-light) / <alpha-value>)",
+        "nebula-cyan": "hsl(var(--nebula-cyan) / <alpha-value>)",
+        "nebula-blue": "hsl(var(--nebula-blue) / <alpha-value>)",
+        "glow-purple": "hsl(var(--glow-purple) / <alpha-value>)",
         // Flat / base colors (regular buttons)
         background: "hsl(var(--background) / <alpha-value>)",
         foreground: "hsl(var(--foreground) / <alpha-value>)",
