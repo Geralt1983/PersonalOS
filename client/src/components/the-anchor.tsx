@@ -1,6 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Anchor as AnchorIcon, Droplets, Smartphone, BookOpen } from "lucide-react";
-import type { Anchor } from "@shared/schema";
 
 const anchorIcons: Record<number, typeof Droplets> = {
   1: Droplets,
@@ -8,8 +7,14 @@ const anchorIcons: Record<number, typeof Droplets> = {
   3: BookOpen,
 };
 
+interface AnchorItem {
+  id: number;
+  label: string;
+  active: boolean;
+}
+
 interface TheAnchorProps {
-  anchors: Anchor[];
+  anchors: AnchorItem[];
   onToggle: (id: number) => void;
 }
 

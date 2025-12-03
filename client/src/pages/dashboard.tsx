@@ -1,158 +1,183 @@
-import { useState, useEffect, useCallback } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { VitalityGauge } from "@/components/vitality-gauge";
 import { TheAnchor } from "@/components/the-anchor";
 import { TheConstruct } from "@/components/the-construct";
 import { BrainDump } from "@/components/brain-dump";
 import { MomentumWidget } from "@/components/momentum-widget";
-import type { EnergyLevel, Anchor, ProjectStep, BrainDumpEntry, MomentumData } from "@shared/schema";
+import { Skeleton } from "@/components/ui/skeleton";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import type { EnergyLevel, MomentumData } from "@shared/schema";
 
-const STORAGE_KEY = "sanctuary-os-data";
+interface AnchorWithStatus {
+  id: number;
+  label: string;
+  icon: string | null;
+  sortOrder: number | null;
+  createdAt: Date;
+  active: boolean;
+}
 
-interface SanctuaryState {
-  energyLevel: EnergyLevel;
-  streak: number;
-  anchors: Anchor[];
-  projectSteps: ProjectStep[];
-  brainDumpEntries: BrainDumpEntry[];
+interface ProjectStepData {
+  id: number;
+  projectId: number;
+  title: string;
+  description: string | null;
+  effort: string | null;
+  completed: boolean | null;
+  sortOrder: number | null;
+  completedAt: Date | null;
+}
+
+interface BrainDumpEntryData {
+  id: number;
+  text: string;
+  timestamp: string;
+  category: string | null;
+  tagIds: number[] | null;
+}
+
+interface SanctuaryData {
+  energyState: {
+    id: string;
+    level: EnergyLevel;
+    streak: number;
+    lastUpdated: string;
+  };
+  anchors: AnchorWithStatus[];
+  project: { id: number; name: string } | null;
+  projectSteps: ProjectStepData[];
+  brainDumpEntries: BrainDumpEntryData[];
   momentum: MomentumData;
-  lastVisit: string;
-}
-
-const defaultState: SanctuaryState = {
-  energyLevel: "medium",
-  streak: 7,
-  anchors: [
-    { id: 1, label: "Hydrate (32oz)", active: false },
-    { id: 2, label: "No Phone in Bed", active: false },
-    { id: 3, label: "Read Physics (10m)", active: false },
-  ],
-  projectSteps: [
-    { id: 1, title: "Clear & Assess", description: "Remove existing items, measure space", completed: true, effort: "quick" },
-    { id: 2, title: "Prime Walls", description: "Prep and prime for paint", completed: true, effort: "medium" },
-    { id: 3, title: "Paint Sunroom", description: "Two coats of Coastal Blue", completed: false, effort: "heavy" },
-    { id: 4, title: "Install Shelving", description: "Mount 3 floating shelves", completed: false, effort: "medium" },
-    { id: 5, title: "Style & Decorate", description: "Add plants, books, lighting", completed: false, effort: "quick" },
-  ],
-  brainDumpEntries: [
-    { id: 1, text: "Order new sheets for sunroom", timestamp: "11:32 PM" },
-    { id: 2, text: "Check paint humidity levels tomorrow", timestamp: "10:15 PM" },
-    { id: 3, text: "Call contractor about shelving install", timestamp: "9:08 PM" },
-  ],
-  momentum: {
-    completedToday: 5,
-    weeklyCompletion: 28,
-    weeklyTarget: 35,
-    streak: 7,
-  },
-  lastVisit: new Date().toDateString(),
-};
-
-function loadState(): SanctuaryState {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      const today = new Date().toDateString();
-      
-      if (parsed.lastVisit !== today) {
-        return {
-          ...parsed,
-          anchors: parsed.anchors.map((a: Anchor) => ({ ...a, active: false })),
-          momentum: {
-            ...parsed.momentum,
-            completedToday: 0,
-          },
-          lastVisit: today,
-        };
-      }
-      return parsed;
-    }
-  } catch (e) {
-    console.error("Failed to load state:", e);
-  }
-  return defaultState;
-}
-
-function saveState(state: SanctuaryState) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch (e) {
-    console.error("Failed to save state:", e);
-  }
 }
 
 export default function Dashboard() {
-  const [state, setState] = useState<SanctuaryState>(loadState);
+  const { data, isLoading, error } = useQuery<SanctuaryData>({
+    queryKey: ["/api/sanctuary"],
+  });
 
-  useEffect(() => {
-    saveState(state);
-  }, [state]);
+  const logEnergyMutation = useMutation({
+    mutationFn: async (level: EnergyLevel) => {
+      return apiRequest("POST", "/api/energy/log", { level });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/sanctuary"] });
+    },
+  });
 
-  const handleEnergyChange = useCallback((level: EnergyLevel) => {
-    setState(prev => ({ ...prev, energyLevel: level }));
-  }, []);
+  const toggleAnchorMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return apiRequest("PATCH", `/api/anchors/${id}/toggle`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/sanctuary"] });
+    },
+  });
 
-  const handleAnchorToggle = useCallback((id: number) => {
-    setState(prev => {
-      const newAnchors = prev.anchors.map(a => 
-        a.id === id ? { ...a, active: !a.active } : a
-      );
-      const wasActive = prev.anchors.find(a => a.id === id)?.active;
-      const completedDelta = wasActive ? -1 : 1;
-      
-      return {
-        ...prev,
-        anchors: newAnchors,
-        momentum: {
-          ...prev.momentum,
-          completedToday: Math.max(0, prev.momentum.completedToday + completedDelta),
-          weeklyCompletion: Math.max(0, prev.momentum.weeklyCompletion + completedDelta),
-        },
-      };
-    });
-  }, []);
+  const toggleStepMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return apiRequest("PATCH", `/api/project-steps/${id}/toggle`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/sanctuary"] });
+    },
+  });
 
-  const handleStepToggle = useCallback((id: number) => {
-    setState(prev => {
-      const step = prev.projectSteps.find(s => s.id === id);
-      if (!step) return prev;
-      
-      const wasCompleted = step.completed;
-      const completedDelta = wasCompleted ? -1 : 1;
-      
-      return {
-        ...prev,
-        projectSteps: prev.projectSteps.map(s => 
-          s.id === id ? { ...s, completed: !s.completed } : s
-        ),
-        momentum: {
-          ...prev.momentum,
-          completedToday: Math.max(0, prev.momentum.completedToday + completedDelta),
-          weeklyCompletion: Math.max(0, prev.momentum.weeklyCompletion + completedDelta),
-        },
-      };
-    });
-  }, []);
+  const addBrainDumpMutation = useMutation({
+    mutationFn: async (text: string) => {
+      return apiRequest("POST", "/api/brain-dump", { text });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/sanctuary"] });
+    },
+  });
 
-  const handleAddBrainDump = useCallback((text: string) => {
-    const newEntry: BrainDumpEntry = {
-      id: Date.now(),
-      text,
-      timestamp: new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
-    };
-    
-    setState(prev => ({
-      ...prev,
-      brainDumpEntries: [newEntry, ...prev.brainDumpEntries],
-    }));
-  }, []);
+  const deleteBrainDumpMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return apiRequest("DELETE", `/api/brain-dump/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/sanctuary"] });
+    },
+  });
 
-  const handleDeleteBrainDump = useCallback((id: number) => {
-    setState(prev => ({
-      ...prev,
-      brainDumpEntries: prev.brainDumpEntries.filter(e => e.id !== id),
-    }));
-  }, []);
+  const handleEnergyChange = (level: EnergyLevel) => {
+    logEnergyMutation.mutate(level);
+  };
+
+  const handleAnchorToggle = (id: number) => {
+    toggleAnchorMutation.mutate(id);
+  };
+
+  const handleStepToggle = (id: number) => {
+    toggleStepMutation.mutate(id);
+  };
+
+  const handleAddBrainDump = (text: string) => {
+    addBrainDumpMutation.mutate(text);
+  };
+
+  const handleDeleteBrainDump = (id: number) => {
+    deleteBrainDumpMutation.mutate(id);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background p-4 md:p-6 lg:p-8">
+        <header className="mb-6 md:mb-8">
+          <div className="flex items-center gap-3">
+            <Skeleton className="w-10 h-10 rounded-lg" />
+            <div>
+              <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-4 w-48 mt-1" />
+            </div>
+          </div>
+        </header>
+        <main className="grid grid-cols-1 lg:grid-cols-5 gap-6 max-w-7xl mx-auto">
+          <div className="lg:col-span-3">
+            <Skeleton className="h-[500px] rounded-xl" />
+          </div>
+          <div className="lg:col-span-2 flex flex-col gap-6">
+            <Skeleton className="h-64 rounded-xl" />
+            <Skeleton className="h-72 rounded-xl" />
+            <Skeleton className="h-56 rounded-xl" />
+            <Skeleton className="h-48 rounded-xl" />
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-foreground mb-2">Unable to load dashboard</h2>
+          <p className="text-muted-foreground">Please try refreshing the page.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Transform data to match component props
+  const anchorsForComponent = data.anchors.map(a => ({
+    id: a.id,
+    label: a.label,
+    active: a.active,
+  }));
+
+  const stepsForComponent = data.projectSteps.map(s => ({
+    id: s.id,
+    title: s.title,
+    description: s.description || "",
+    completed: s.completed || false,
+    effort: (s.effort || "medium") as "quick" | "medium" | "heavy",
+  }));
+
+  const brainDumpForComponent = data.brainDumpEntries.map(e => ({
+    id: e.id,
+    text: e.text,
+    timestamp: e.timestamp,
+  }));
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-6 lg:p-8">
@@ -175,31 +200,32 @@ export default function Dashboard() {
       <main className="grid grid-cols-1 lg:grid-cols-5 gap-6 max-w-7xl mx-auto">
         <div className="lg:col-span-3">
           <VitalityGauge
-            energyLevel={state.energyLevel}
-            streak={state.streak}
+            energyLevel={data.energyState.level}
+            streak={data.energyState.streak}
             onEnergyChange={handleEnergyChange}
+            isUpdating={logEnergyMutation.isPending}
           />
         </div>
 
         <div className="lg:col-span-2 flex flex-col gap-6">
           <TheAnchor 
-            anchors={state.anchors} 
+            anchors={anchorsForComponent} 
             onToggle={handleAnchorToggle} 
           />
           
           <TheConstruct 
-            steps={state.projectSteps} 
+            steps={stepsForComponent} 
             onToggle={handleStepToggle} 
           />
           
           <BrainDump
-            entries={state.brainDumpEntries}
+            entries={brainDumpForComponent}
             onAdd={handleAddBrainDump}
             onDelete={handleDeleteBrainDump}
           />
           
           <MomentumWidget 
-            data={state.momentum} 
+            data={data.momentum} 
           />
         </div>
       </main>

@@ -1,6 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Hammer, Check, Circle, Clock } from "lucide-react";
-import type { ProjectStep } from "@shared/schema";
+import { Hammer, Check } from "lucide-react";
 
 const effortLabels: Record<string, { label: string; color: string }> = {
   quick: { label: "Quick win", color: "text-green-400" },
@@ -8,8 +7,16 @@ const effortLabels: Record<string, { label: string; color: string }> = {
   heavy: { label: "Deep work", color: "text-glow-purple" },
 };
 
+interface StepItem {
+  id: number;
+  title: string;
+  description: string;
+  completed: boolean;
+  effort: "quick" | "medium" | "heavy";
+}
+
 interface TheConstructProps {
-  steps: ProjectStep[];
+  steps: StepItem[];
   onToggle: (id: number) => void;
 }
 

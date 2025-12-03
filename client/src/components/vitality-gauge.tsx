@@ -64,9 +64,10 @@ interface VitalityGaugeProps {
   energyLevel: EnergyLevel;
   streak: number;
   onEnergyChange: (level: EnergyLevel) => void;
+  isUpdating?: boolean;
 }
 
-export function VitalityGauge({ energyLevel, streak, onEnergyChange }: VitalityGaugeProps) {
+export function VitalityGauge({ energyLevel, streak, onEnergyChange, isUpdating }: VitalityGaugeProps) {
   const [isAnimating, setIsAnimating] = useState(false);
   const config = energyConfig[energyLevel];
   const Icon = config.icon;

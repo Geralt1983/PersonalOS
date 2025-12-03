@@ -3,10 +3,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Brain, Mic, MicOff, Plus, X, Clock } from "lucide-react";
-import type { BrainDumpEntry } from "@shared/schema";
+
+interface BrainDumpEntryItem {
+  id: number;
+  text: string;
+  timestamp: string;
+}
 
 interface BrainDumpProps {
-  entries: BrainDumpEntry[];
+  entries: BrainDumpEntryItem[];
   onAdd: (text: string) => void;
   onDelete: (id: number) => void;
 }
