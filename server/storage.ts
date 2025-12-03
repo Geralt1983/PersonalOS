@@ -409,8 +409,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createBrainDumpEntry(data: InsertBrainDumpEntry): Promise<BrainDumpEntry> {
-    // Auto-categorize based on content
-    const category = this.autoCategorize(data.text || "");
+    // Only auto-categorize if user didn't provide a category
+    const category = data.category || this.autoCategorize(data.text || "");
     
     const [entry] = await db.insert(brainDumpEntries)
       .values({ ...data, category })

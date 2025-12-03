@@ -8,7 +8,7 @@ import { MomentumWidget } from "@/components/momentum-widget";
 import { EnergyHistory } from "@/components/energy-history";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { EnergyLevel, MomentumData, Project, ProjectStep } from "@shared/schema";
+import type { EnergyLevel, MomentumData, Project, ProjectStep, Tag, BrainDumpEntry } from "@shared/schema";
 
 interface AnchorWithStatus {
   id: number;
@@ -74,6 +74,14 @@ export default function Dashboard() {
     enabled: !!activeProjectId,
   });
 
+  const { data: tags = [] } = useQuery<Tag[]>({
+    queryKey: ["/api/tags"],
+  });
+
+  const { data: brainDumpEntries = [] } = useQuery<BrainDumpEntry[]>({
+    queryKey: ["/api/brain-dump"],
+  });
+
   useEffect(() => {
     if (data?.project && !activeProjectId) {
       setActiveProjectId(data.project.id);
@@ -121,11 +129,12 @@ export default function Dashboard() {
   });
 
   const addBrainDumpMutation = useMutation({
-    mutationFn: async (text: string) => {
-      return apiRequest("POST", "/api/brain-dump", { text });
+    mutationFn: async ({ text, category, tagIds }: { text: string; category?: string; tagIds?: number[] }) => {
+      return apiRequest("POST", "/api/brain-dump", { text, category, tagIds });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/sanctuary"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/brain-dump"] });
     },
   });
 
@@ -135,6 +144,36 @@ export default function Dashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/sanctuary"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/brain-dump"] });
+    },
+  });
+
+  const updateBrainDumpMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: number; updates: { tagIds?: number[]; category?: string } }) => {
+      return apiRequest("PATCH", `/api/brain-dump/${id}`, updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/sanctuary"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/brain-dump"] });
+    },
+  });
+
+  const archiveBrainDumpMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return apiRequest("PATCH", `/api/brain-dump/${id}/archive`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/sanctuary"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/brain-dump"] });
+    },
+  });
+
+  const createTagMutation = useMutation({
+    mutationFn: async (name: string) => {
+      return apiRequest("POST", "/api/tags", { name });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tags"] });
     },
   });
 
@@ -150,12 +189,24 @@ export default function Dashboard() {
     toggleStepMutation.mutate(id);
   };
 
-  const handleAddBrainDump = (text: string) => {
-    addBrainDumpMutation.mutate(text);
+  const handleAddBrainDump = (text: string, category?: string, tagIds?: number[]) => {
+    addBrainDumpMutation.mutate({ text, category, tagIds });
   };
 
   const handleDeleteBrainDump = (id: number) => {
     deleteBrainDumpMutation.mutate(id);
+  };
+
+  const handleUpdateBrainDump = (id: number, updates: { tagIds?: number[]; category?: string }) => {
+    updateBrainDumpMutation.mutate({ id, updates });
+  };
+
+  const handleArchiveBrainDump = (id: number) => {
+    archiveBrainDumpMutation.mutate(id);
+  };
+
+  const handleCreateTag = (name: string) => {
+    createTagMutation.mutate(name);
   };
 
   if (isLoading) {
@@ -217,11 +268,9 @@ export default function Dashboard() {
     effort: (s.effort || "medium") as "quick" | "medium" | "heavy",
   }));
 
-  const brainDumpForComponent = data.brainDumpEntries.map(e => ({
-    id: e.id,
-    text: e.text,
-    timestamp: e.timestamp,
-  }));
+  const brainDumpEntriesFiltered = brainDumpEntries.length > 0 
+    ? brainDumpEntries.filter(e => !e.archivedAt)
+    : data.brainDumpEntries.filter(e => !(e as any).archivedAt);
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-6 lg:p-8">
@@ -267,9 +316,13 @@ export default function Dashboard() {
           />
           
           <BrainDump
-            entries={brainDumpForComponent}
+            entries={brainDumpEntriesFiltered}
+            tags={tags}
             onAdd={handleAddBrainDump}
             onDelete={handleDeleteBrainDump}
+            onUpdate={handleUpdateBrainDump}
+            onArchive={handleArchiveBrainDump}
+            onCreateTag={handleCreateTag}
           />
           
           <MomentumWidget 
