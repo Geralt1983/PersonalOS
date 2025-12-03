@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { VitalityGauge } from "@/components/vitality-gauge";
 import { TheAnchor } from "@/components/the-anchor";
@@ -7,7 +8,7 @@ import { MomentumWidget } from "@/components/momentum-widget";
 import { EnergyHistory } from "@/components/energy-history";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { EnergyLevel, MomentumData } from "@shared/schema";
+import type { EnergyLevel, MomentumData, Project, ProjectStep } from "@shared/schema";
 
 interface AnchorWithStatus {
   id: number;
@@ -52,9 +53,36 @@ interface SanctuaryData {
 }
 
 export default function Dashboard() {
+  const [activeProjectId, setActiveProjectId] = useState<number | null>(null);
+  
   const { data, isLoading, error } = useQuery<SanctuaryData>({
     queryKey: ["/api/sanctuary"],
   });
+
+  const { data: projects = [] } = useQuery<Project[]>({
+    queryKey: ["/api/projects"],
+  });
+
+  const { data: projectSteps = [] } = useQuery<ProjectStep[]>({
+    queryKey: ["/api/projects", activeProjectId, "steps"],
+    queryFn: async () => {
+      if (!activeProjectId) return [];
+      const res = await fetch(`/api/projects/${activeProjectId}/steps`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch steps");
+      return res.json();
+    },
+    enabled: !!activeProjectId,
+  });
+
+  useEffect(() => {
+    if (data?.project && !activeProjectId) {
+      setActiveProjectId(data.project.id);
+    } else if (!activeProjectId && projects.length > 0) {
+      setActiveProjectId(projects[0].id);
+    }
+  }, [data?.project, projects, activeProjectId]);
+
+  const activeProject = projects.find(p => p.id === activeProjectId) || data?.project || null;
 
   const logEnergyMutation = useMutation({
     mutationFn: async (level: EnergyLevel) => {
@@ -86,6 +114,9 @@ export default function Dashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/sanctuary"] });
+      if (activeProjectId) {
+        queryClient.invalidateQueries({ queryKey: ["/api/projects", activeProjectId, "steps"] });
+      }
     },
   });
 
@@ -165,6 +196,11 @@ export default function Dashboard() {
     );
   }
 
+  const handleProjectChange = (projectId: number) => {
+    setActiveProjectId(projectId);
+    queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "steps"] });
+  };
+
   // Transform data to match component props
   const anchorsForComponent = data.anchors.map(a => ({
     id: a.id,
@@ -172,10 +208,11 @@ export default function Dashboard() {
     active: a.active,
   }));
 
-  const stepsForComponent = data.projectSteps.map(s => ({
+  // Use fetched project steps if we have an active project, otherwise use sanctuary data
+  const stepsForComponent = (activeProjectId && projectSteps.length > 0 ? projectSteps : data.projectSteps).map(s => ({
     id: s.id,
     title: s.title,
-    description: s.description || "",
+    description: (s as any).description || "",
     completed: s.completed || false,
     effort: (s.effort || "medium") as "quick" | "medium" | "heavy",
   }));
@@ -223,8 +260,10 @@ export default function Dashboard() {
           />
           
           <TheConstruct 
+            project={activeProject}
             steps={stepsForComponent} 
-            onToggle={handleStepToggle} 
+            onToggle={handleStepToggle}
+            onProjectChange={handleProjectChange}
           />
           
           <BrainDump
