@@ -6,6 +6,7 @@ import { TheConstruct } from "@/components/the-construct";
 import { BrainDump } from "@/components/brain-dump";
 import { MomentumWidget } from "@/components/momentum-widget";
 import { EnergyHistory } from "@/components/energy-history";
+import { WeeklyReflections } from "@/components/weekly-reflections";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { EnergyLevel, MomentumData, Project, ProjectStep, Tag, BrainDumpEntry } from "@shared/schema";
@@ -328,6 +329,8 @@ export default function Dashboard() {
           <MomentumWidget 
             data={data.momentum} 
           />
+          
+          <WeeklyReflections />
         </div>
       </main>
 
