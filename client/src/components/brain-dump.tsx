@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -172,12 +173,12 @@ export function BrainDump({ entries, tags, onAdd, onDelete, onUpdate, onArchive,
   };
 
   return (
-    <Card className="glass-card border-nebula-blue/20 flex flex-col">
+    <SpotlightCard className="flex flex-col backdrop-blur-xl">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Brain className="w-4 h-4 text-nebula-blue" />
-            <CardTitle className="text-sm">Brain Dump</CardTitle>
+            <CardTitle className="text-sm font-mono">Brain_Dump</CardTitle>
           </div>
           <Button
             size="icon"
@@ -189,7 +190,7 @@ export function BrainDump({ entries, tags, onAdd, onDelete, onUpdate, onArchive,
             <Filter className="w-4 h-4" />
           </Button>
         </div>
-        <CardDescription className="text-xs">Unload your mind...</CardDescription>
+        <CardDescription className="text-xs font-mono">Unload_your_mind</CardDescription>
       </CardHeader>
       
       <CardContent className="space-y-3 flex-1 flex flex-col">
@@ -515,6 +516,6 @@ export function BrainDump({ entries, tags, onAdd, onDelete, onUpdate, onArchive,
           </motion.div>
         )}
       </CardContent>
-    </Card>
+    </SpotlightCard>
   );
 }

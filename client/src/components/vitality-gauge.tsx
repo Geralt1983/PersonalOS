@@ -1,4 +1,5 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { Zap, Moon, Sun, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { EnergyLevel, EnergyTask } from "@shared/schema";
@@ -96,7 +97,7 @@ export function VitalityGauge({ energyLevel, streak, onEnergyChange, isUpdating 
   };
 
   return (
-    <Card className={`glass-card border-2 ${config.borderGlow} ${config.shadowGlow} h-full flex flex-col transition-all duration-500 relative overflow-hidden`}>
+    <SpotlightCard className="h-full flex flex-col transition-all duration-500 relative overflow-hidden backdrop-blur-xl">
       <motion.div 
         className="absolute inset-0 opacity-20 pointer-events-none"
         animate={{
@@ -108,8 +109,8 @@ export function VitalityGauge({ energyLevel, streak, onEnergyChange, isUpdating 
       <CardHeader className="pb-4 z-10">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <CardTitle className="text-xl md:text-2xl font-bold tracking-tight text-gray-200" data-testid="text-vitality-title">Vitality Gauge</CardTitle>
-            <CardDescription className="text-sm md:text-base mt-1">System State</CardDescription>
+            <CardTitle className="text-xl md:text-2xl font-mono tracking-tight text-gray-200" data-testid="text-vitality-title">Vitality_Gauge</CardTitle>
+            <CardDescription className="text-sm md:text-base mt-1 font-mono">System_State</CardDescription>
           </div>
           <motion.div 
             className="text-right"
@@ -190,7 +191,7 @@ export function VitalityGauge({ energyLevel, streak, onEnergyChange, isUpdating 
             transition={{ duration: 0.3 }}
             className="text-center"
           >
-            <div className="text-xs text-gray-500 uppercase tracking-widest mb-2">Protocol</div>
+            <div className="text-xs text-gray-500 font-mono uppercase tracking-widest mb-2">Current_Protocol</div>
             <div className={`text-lg font-light text-cyan-100`}>
               {energyLevel === 'low' && "Disconnect. Hydrate. Breathe."}
               {energyLevel === 'medium' && "Maintain flow. Clear small tasks."}
@@ -260,6 +261,6 @@ export function VitalityGauge({ energyLevel, streak, onEnergyChange, isUpdating 
           </motion.div>
         </div>
       </CardContent>
-    </Card>
+    </SpotlightCard>
   );
 }

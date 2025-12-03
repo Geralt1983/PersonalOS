@@ -1,4 +1,5 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { Anchor as AnchorIcon, Droplets, Smartphone, BookOpen } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -31,14 +32,14 @@ export function TheAnchor({ anchors, onToggle }: TheAnchorProps) {
   };
 
   return (
-    <Card className="glass-card border-none overflow-hidden relative">
+    <SpotlightCard className="overflow-hidden relative backdrop-blur-xl">
       <div className="subtle-grid absolute inset-0 pointer-events-none" />
       
       <CardHeader className="pb-3 relative z-10">
         <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-xs font-bold tracking-[0.2em] text-nebula-cyan uppercase flex items-center gap-2">
+          <CardTitle className="text-xs font-mono font-bold tracking-[0.2em] text-nebula-cyan uppercase flex items-center gap-2">
             <AnchorIcon className="w-4 h-4" />
-            The Anchor
+            The_Anchor
           </CardTitle>
           <motion.span 
             className="text-xs font-semibold text-nebula-cyan px-2 py-1 rounded-full bg-nebula-cyan/10 border border-nebula-cyan/30"
@@ -152,6 +153,6 @@ export function TheAnchor({ anchors, onToggle }: TheAnchorProps) {
           )}
         </AnimatePresence>
       </CardContent>
-    </Card>
+    </SpotlightCard>
   );
 }

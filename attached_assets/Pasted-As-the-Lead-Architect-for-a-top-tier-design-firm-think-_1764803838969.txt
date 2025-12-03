@@ -1,0 +1,195 @@
+As the Lead Architect for a top-tier design firm (think the team behind Linear, Arc, or Apple's Human Interface group), my critique of the current build is that it feels functional but "dead."
+It displays data, but it doesn't seduce the user into interacting with it. High-end software feels biological—it notices you before you touch it.
+Here are the three specific upgrades we would execute to move this from "Prototype" to "Design System":
+1. The "Halo" Effect (Mouse-Tracking Borders)
+The Problem: The current cards are static boxes.
+The Fix: We implement a localized "spotlight" that follows your cursor. Borders shouldn't be visible everywhere; they should only reveal themselves where your attention is focused. This reduces cognitive load and looks incredibly premium (like light reflecting off brushed steel).
+2. "Chewy" Physics (Gestural Confidence)
+The Problem: The current animations are standard "ease-in-out."
+The Fix: We tune the springs to be "over-damped." When you toggle a habit in The Anchor, it shouldn't just slide; it should stretch slightly and snap back with weight, mimicking a physical mechanical switch.
+3. Typography: The "Analyst" Pairing
+The Problem: Using a single sans-serif font is safe but boring.
+The Fix: We mix a Humanist Sans (for reading) with a Technical Mono (for data/labels). This visually reinforces your dual identity: The Father (Humanist) and The Analyst (Mono).
+Let's Execute: The "Halo" Upgrade
+I am going to replace your standard Card with a new SpotlightCard. This detects mouse position and creates a localized glow effect on the border and background.
+1. Create components/ui/spotlight-card.tsx
+"use client"
+
+import { useRef, useState, MouseEvent } from "react"
+import { motion, useMotionTemplate, useMotionValue } from "framer-motion"
+
+export function SpotlightCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  const mouseX = useMotionValue(0)
+  const mouseY = useMotionValue(0)
+
+  function handleMouseMove({ currentTarget, clientX, clientY }: MouseEvent) {
+    const { left, top } = currentTarget.getBoundingClientRect()
+    mouseX.set(clientX - left)
+    mouseY.set(clientY - top)
+  }
+
+  return (
+    <div
+      className={`group relative border border-white/10 bg-black/40 overflow-hidden rounded-xl ${className}`}
+      onMouseMove={handleMouseMove}
+    >
+      {/* 1. The "Spotlight" Radial Gradient overlay (Reveal on hover) */}
+      <motion.div
+        className="pointer-events-none absolute -inset-px rounded-xl opacity-0 transition duration-300 group-hover:opacity-100"
+        style={{
+          background: useMotionTemplate`
+            radial-gradient(
+              650px circle at ${mouseX}px ${mouseY}px,
+              rgba(34, 211, 238, 0.15),
+              transparent 80%
+            )
+          `,
+        }}
+      />
+      
+      {/* 2. The "Border" Reveal (The Halo) */}
+      <motion.div
+        className="pointer-events-none absolute -inset-px rounded-xl opacity-0 transition duration-300 group-hover:opacity-100"
+        style={{
+          background: useMotionTemplate`
+            radial-gradient(
+              400px circle at ${mouseX}px ${mouseY}px,
+              rgba(34, 211, 238, 0.4), 
+              transparent 80%
+            )
+          `,
+          maskImage: "linear-gradient(black, black) content-box, linear-gradient(black, black)",
+          WebkitMaskImage: "linear-gradient(black, black) content-box, linear-gradient(black, black)",
+          maskComposite: "exclude",
+          WebkitMaskComposite: "xor",
+        }} 
+      />
+
+      {/* Content Layer */}
+      <div className="relative h-full">
+        {children}
+      </div>
+    </div>
+  )
+}
+
+2. Update components/vitality-gauge.tsx to use the Spotlight
+We replace Card with SpotlightCard and remove the static border classes since the Spotlight handles the aesthetics.
+"use client"
+
+import { useState } from "react"
+// CHANGE: Import the new SpotlightCard
+import { SpotlightCard } from "@/components/ui/spotlight-card" 
+import { CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { motion, AnimatePresence } from "framer-motion"
+
+type EnergyLevel = "low" | "medium" | "high"
+
+export function VitalityGauge() {
+  const [currentEnergy, setCurrentEnergy] = useState<EnergyLevel>("medium")
+
+  // ... keep breathingVariants and transitions same as before ...
+  const breathingVariants = {
+    low: { scale: [1, 1.05, 1], opacity: [0.5, 0.8, 0.5] },
+    medium: { scale: [1, 1.02, 1], opacity: [0.8, 1, 0.8] },
+    high: { scale: [1, 1.1, 1], opacity: [0.9, 1, 0.9] },
+  }
+  
+  const breathingTransition = {
+    low: { duration: 6, repeat: Infinity, ease: "easeInOut" },
+    medium: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+    high: { duration: 0.5, repeat: Infinity, ease: "easeInOut" },
+  }
+
+  const handleCycle = () => {
+    setCurrentEnergy(prev => prev === "low" ? "medium" : prev === "medium" ? "high" : "low")
+  }
+
+  return (
+    // CHANGE: Use SpotlightCard wrapper
+    <SpotlightCard className="h-[400px] lg:h-full flex flex-col backdrop-blur-xl">
+       {/* Background Dynamic Gradient */}
+       <motion.div 
+         className="absolute inset-0 opacity-20 pointer-events-none"
+         animate={{
+            background: currentEnergy === 'low' 
+                ? 'radial-gradient(circle at 50% 50%, #06b6d4 0%, transparent 70%)' 
+                : currentEnergy === 'medium'
+                ? 'radial-gradient(circle at 50% 50%, #3b82f6 0%, transparent 70%)'
+                : 'radial-gradient(circle at 50% 50%, #a855f7 0%, transparent 70%)'
+         }}
+         transition={{ duration: 1.5 }}
+       />
+
+      <CardHeader className="pb-2 z-10">
+         <div className="flex justify-between items-center">
+             {/* CHANGE: Added font-mono for the "Analyst" aesthetic */}
+             <CardTitle className="text-sm md:text-xl font-mono text-gray-200 uppercase tracking-widest">
+                Vitality_Gauge
+             </CardTitle>
+             <div className={`h-2 w-2 rounded-full shadow-[0_0_10px] animate-pulse ${
+                 currentEnergy === 'low' ? 'bg-cyan-500 shadow-cyan-500' :
+                 currentEnergy === 'medium' ? 'bg-blue-500 shadow-blue-500' :
+                 'bg-purple-500 shadow-purple-500'
+             }`} />
+         </div>
+      </CardHeader>
+      
+      <CardContent className="flex-1 flex flex-col gap-4 md:gap-8 z-10 items-center justify-center">
+        {/* ... Keep Orb & Text Logic exactly the same ... */}
+        <motion.div 
+            onClick={handleCycle}
+            className="relative cursor-pointer"
+            whileTap={{ scale: 0.95 }}
+        >
+            <div className="w-40 h-40 md:w-64 md:h-64 rounded-full border border-white/5 flex items-center justify-center relative bg-black/20 shadow-2xl">
+                <motion.div 
+                    className={`absolute inset-0 rounded-full blur-2xl md:blur-3xl ${
+                        currentEnergy === 'low' ? 'bg-cyan-500/20' : 
+                        currentEnergy === 'medium' ? 'bg-blue-500/20' : 'bg-purple-500/30'
+                    }`}
+                    variants={breathingVariants}
+                    animate={currentEnergy}
+                    transition={breathingTransition[currentEnergy]}
+                />
+                
+                <div className="text-center relative z-10">
+                    <motion.div 
+                        key={currentEnergy} 
+                        initial={{ y: 10, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        className="text-3xl md:text-5xl font-black uppercase tracking-tighter text-white font-sans"
+                    >
+                        {currentEnergy}
+                    </motion.div>
+                </div>
+            </div>
+        </motion.div>
+
+        <AnimatePresence mode="wait">
+            <motion.div 
+                key={currentEnergy}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="text-center px-4"
+            >
+                {/* CHANGE: Mono font for labels */}
+                <div className="text-[10px] md:text-xs text-gray-500 font-mono uppercase tracking-widest mb-1 md:mb-2">
+                    Current_Protocol
+                </div>
+                <div className="text-base md:text-lg font-light text-cyan-100 leading-tight">
+                    {currentEnergy === 'low' && "Drop the guilt. Nap."}
+                    {currentEnergy === 'medium' && "Clean one room. Check email."}
+                    {currentEnergy === 'high' && "Sunroom: Install shelf brackets."}
+                </div>
+            </motion.div>
+        </AnimatePresence>
+
+      </CardContent>
+    </SpotlightCard>
+  )
+}
+
+3. Apply to BrainDump & TheAnchor
+Simply wrap those components in <SpotlightCard> just like VitalityGauge. The borders will now glow blue/cyan wherever your mouse moves, creating that unified "Liquid Steel" feel.
