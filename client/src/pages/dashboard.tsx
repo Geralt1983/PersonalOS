@@ -330,7 +330,15 @@ export default function Dashboard() {
             viewport={{ once: true, amount: 0.3 }}
             transition={{ duration: 0.5 }}
           >
-            <BrainDump />
+            <BrainDump
+              entries={brainDumpEntriesFiltered}
+              tags={tags}
+              onAdd={handleAddBrainDump}
+              onDelete={handleDeleteBrainDump}
+              onUpdate={handleUpdateBrainDump}
+              onArchive={handleArchiveBrainDump}
+              onCreateTag={handleCreateTag}
+            />
           </motion.section>
 
           <motion.section
