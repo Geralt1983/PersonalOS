@@ -1,532 +1,245 @@
-import { useState, useRef, useEffect } from "react";
-import { CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { SpotlightCard } from "@/components/ui/spotlight-card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { 
-  Brain, Mic, MicOff, Plus, X, Clock, Search, Tag, 
-  Lightbulb, CheckCircle, Bell, FileText, Filter, Archive
-} from "lucide-react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import type { Tag as TagType, BrainDumpEntry } from "@shared/schema";
+import { Plus, Mic, Filter, Lightbulb, FileText, Trash2, Brain } from "lucide-react";
+import { SpotlightCard } from "@/components/ui/spotlight-card";
 
-interface BrainDumpProps {
-  entries: BrainDumpEntry[];
-  tags: TagType[];
-  onAdd: (text: string, category?: string, tagIds?: number[]) => void;
-  onDelete: (id: number) => void;
-  onUpdate: (id: number, updates: { tagIds?: number[]; category?: string }) => void;
-  onArchive: (id: number) => void;
-  onCreateTag: (name: string) => void;
+type Category = "idea" | "task" | "note" | "reminder";
+
+interface Thought {
+  id: string;
+  text: string;
+  category: Category;
+  timestamp: string;
+  createdAt: number;
 }
 
-const CATEGORIES = [
-  { value: "idea", label: "Idea", icon: Lightbulb, color: "text-yellow-400" },
-  { value: "task", label: "Task", icon: CheckCircle, color: "text-green-400" },
-  { value: "reminder", label: "Reminder", icon: Bell, color: "text-orange-400" },
-  { value: "note", label: "Note", icon: FileText, color: "text-blue-400" },
-];
+const STORAGE_KEY = "sanctuary-dump";
 
-export function BrainDump({ entries, tags, onAdd, onDelete, onUpdate, onArchive, onCreateTag }: BrainDumpProps) {
-  const [textInput, setTextInput] = useState("");
-  const [isListening, setIsListening] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedTags, setSelectedTags] = useState<number[]>([]);
-  const [showFilters, setShowFilters] = useState(false);
-  const [newCategory, setNewCategory] = useState<string | null>(null);
-  const [newTagIds, setNewTagIds] = useState<number[]>([]);
-  const [showTagPopover, setShowTagPopover] = useState(false);
-  const [newTagName, setNewTagName] = useState("");
-  const recognitionRef = useRef<any>(null);
+const categoryIcons: Record<Category, typeof Lightbulb> = {
+  idea: Lightbulb,
+  task: FileText,
+  note: FileText,
+  reminder: FileText,
+};
 
-  // Persist entries to localStorage
+const categoryColors: Record<Category, string> = {
+  idea: "text-amber-400",
+  task: "text-blue-400",
+  note: "text-slate-400",
+  reminder: "text-cyan-400",
+};
+
+const defaultThoughts: Thought[] = [];
+
+function formatTimestamp(createdAt: number): string {
+  const now = Date.now();
+  const diff = now - createdAt;
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  return `${days}d ago`;
+}
+
+export function BrainDump() {
+  const [thoughts, setThoughts] = useState<Thought[]>(defaultThoughts);
+  const [newThought, setNewThought] = useState("");
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // Load from localStorage on mount
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       try {
-        localStorage.setItem('sanctuary-dump', JSON.stringify(entries));
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          setThoughts(JSON.parse(saved));
+        }
       } catch (e) {
-        // Silently fail if localStorage is unavailable
+        // Silently fail
+      }
+      setIsLoaded(true);
+    }
+  }, []);
+
+  // Save to localStorage on change
+  useEffect(() => {
+    if (isLoaded && typeof window !== "undefined") {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(thoughts));
+      } catch (e) {
+        // Silently fail
       }
     }
-  }, [entries]);
+  }, [thoughts, isLoaded]);
 
-  const handleAddEntry = () => {
-    if (!textInput.trim()) return;
-    onAdd(textInput.trim(), newCategory || undefined, newTagIds.length > 0 ? newTagIds : undefined);
-    setTextInput("");
-    setNewCategory(null);
-    setNewTagIds([]);
+  const detectCategory = (text: string): Category => {
+    const lower = text.toLowerCase();
+    if (lower.includes("idea") || lower.includes("maybe") || lower.includes("what if")) return "idea";
+    if (lower.includes("todo") || lower.includes("need to") || lower.includes("must")) return "task";
+    if (lower.includes("remember") || lower.includes("don't forget")) return "reminder";
+    return "note";
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleAddEntry();
-    }
-  };
-
-  const handleVoiceCapture = () => {
-    if (!("webkitSpeechRecognition" in window || "SpeechRecognition" in window)) {
-      return;
-    }
-
-    const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-
-    if (!recognitionRef.current) {
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = false;
-      recognitionRef.current.interimResults = false;
-      
-      recognitionRef.current.onstart = () => setIsListening(true);
-      recognitionRef.current.onend = () => setIsListening(false);
-      recognitionRef.current.onerror = () => setIsListening(false);
-      
-      recognitionRef.current.onresult = (event: any) => {
-        const transcript = Array.from(event.results)
-          .map((result: any) => result[0].transcript)
-          .join("");
-        setTextInput(prev => prev + (prev ? " " : "") + transcript);
+  const handleAddThought = () => {
+    if (newThought.trim()) {
+      const thought: Thought = {
+        id: Date.now().toString(),
+        text: newThought.trim(),
+        category: detectCategory(newThought),
+        timestamp: "just now",
+        createdAt: Date.now(),
       };
-    }
+      setThoughts([thought, ...thoughts]);
+      setNewThought("");
 
-    if (isListening) {
-      recognitionRef.current.stop();
-    } else {
-      recognitionRef.current.start();
-    }
-  };
-
-  const handleCreateTag = () => {
-    if (!newTagName.trim()) return;
-    onCreateTag(newTagName.trim());
-    setNewTagName("");
-  };
-
-  const toggleNewTag = (tagId: number) => {
-    setNewTagIds(prev => 
-      prev.includes(tagId) 
-        ? prev.filter(id => id !== tagId)
-        : [...prev, tagId]
-    );
-  };
-
-  const toggleFilterTag = (tagId: number) => {
-    setSelectedTags(prev => 
-      prev.includes(tagId) 
-        ? prev.filter(id => id !== tagId)
-        : [...prev, tagId]
-    );
-  };
-
-  const toggleEntryTag = (entryId: number, currentTagIds: number[], tagId: number) => {
-    const newIds = currentTagIds.includes(tagId)
-      ? currentTagIds.filter(id => id !== tagId)
-      : [...currentTagIds, tagId];
-    onUpdate(entryId, { tagIds: newIds });
-  };
-
-  const supportsVoice = typeof window !== "undefined" && ("webkitSpeechRecognition" in window || "SpeechRecognition" in window);
-
-  const filteredEntries = entries.filter(entry => {
-    if (searchQuery) {
-      if (!entry.text.toLowerCase().includes(searchQuery.toLowerCase())) {
-        return false;
+      if (typeof navigator !== "undefined" && navigator.vibrate) {
+        navigator.vibrate(10);
       }
     }
-    if (selectedCategory && entry.category !== selectedCategory) {
-      return false;
-    }
-    if (selectedTags.length > 0) {
-      const entryTags = entry.tagIds || [];
-      if (!selectedTags.some(tagId => entryTags.includes(tagId))) {
-        return false;
-      }
-    }
-    return true;
-  });
-
-  const getCategoryIcon = (category: string | null) => {
-    const cat = CATEGORIES.find(c => c.value === category);
-    if (!cat) return null;
-    const Icon = cat.icon;
-    return <Icon className={`w-3 h-3 ${cat.color}`} />;
   };
 
-  const getTagName = (tagId: number) => {
-    return tags.find(t => t.id === tagId)?.name || "Unknown";
-  };
-
-  const getTagColor = (tagId: number) => {
-    const tag = tags.find(t => t.id === tagId);
-    if (!tag?.color) return "bg-nebula-blue/20 text-nebula-blue";
-    if (tag.color === "nebula-cyan") return "bg-cyan-500/20 text-cyan-400";
-    if (tag.color === "nebula-blue") return "bg-blue-500/20 text-blue-400";
-    if (tag.color === "nebula-purple") return "bg-purple-500/20 text-purple-400";
-    return "bg-nebula-blue/20 text-nebula-blue";
-  };
-
-  const formatTimestamp = (date: Date | string) => {
-    const d = new Date(date);
-    const now = new Date();
-    const diffMs = now.getTime() - d.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffMins < 1) return "Just now";
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return d.toLocaleDateString();
+  const deleteThought = (id: string) => {
+    setThoughts(thoughts.filter(t => t.id !== id));
   };
 
   return (
-    <SpotlightCard className="flex flex-col backdrop-blur-xl">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between gap-2">
+    <SpotlightCard className="overflow-hidden relative backdrop-blur-xl flex flex-col h-full">
+      {/* Header */}
+      <div className="p-5 pb-4 relative z-10">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Brain className="w-4 h-4 text-nebula-blue" />
-            <CardTitle className="text-sm font-mono">Brain_Dump</CardTitle>
+            <motion.div
+              initial={{ rotate: -20, opacity: 0 }}
+              animate={{ rotate: 0, opacity: 1 }}
+              transition={{ duration: 0.6, type: "spring" }}
+              className="text-blue-400"
+            >
+              <Brain className="w-5 h-5" />
+            </motion.div>
+            <div>
+              <h2 className="text-sm font-mono font-bold tracking-[0.15em] text-blue-400 uppercase">
+                Brain_Dump
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">Unload your mind</p>
+            </div>
           </div>
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={() => setShowFilters(!showFilters)}
-            className={showFilters ? "text-nebula-blue" : "text-muted-foreground"}
-            data-testid="button-toggle-filters"
+          <motion.button
+            className="p-2 hover:bg-white/10 rounded-lg transition text-muted-foreground"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
           >
             <Filter className="w-4 h-4" />
-          </Button>
+          </motion.button>
         </div>
-        <CardDescription className="text-xs font-mono">Unload_your_mind</CardDescription>
-      </CardHeader>
-      
-      <CardContent className="space-y-3 flex-1 flex flex-col">
-        <AnimatePresence>
-          {showFilters && (
-            <motion.div 
-              className="space-y-2 p-2 rounded-lg steel-surface border border-border/30"
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2 }}
+      </div>
+
+      {/* Input Area */}
+      <div className="px-5 pb-4 relative z-10">
+        <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-4 py-3">
+          <input
+            type="text"
+            placeholder="Add thought..."
+            value={newThought}
+            onChange={(e) => setNewThought(e.target.value)}
+            onKeyPress={(e) => e.key === "Enter" && handleAddThought()}
+            className="flex-1 bg-transparent outline-none placeholder-muted-foreground text-sm text-foreground"
+            data-testid="input-add-thought"
+          />
+          <div className="flex items-center gap-1">
+            <motion.button
+              className="p-2 hover:bg-white/10 rounded-lg transition text-muted-foreground"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
-              <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                <Input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search thoughts..."
-                  className="pl-8 h-8 text-xs bg-background/50 border-border/50"
-                  data-testid="input-search-thoughts"
-                />
-              </div>
-              
-              <div className="flex flex-wrap gap-1">
-                {CATEGORIES.map(cat => (
-                  <Badge
-                    key={cat.value}
-                    variant={selectedCategory === cat.value ? "default" : "outline"}
-                    className={`cursor-pointer text-xs ${selectedCategory === cat.value ? "bg-nebula-blue/30" : ""}`}
-                    onClick={() => setSelectedCategory(selectedCategory === cat.value ? null : cat.value)}
-                    data-testid={`filter-category-${cat.value}`}
-                  >
-                    <cat.icon className="w-3 h-3 mr-1" />
-                    {cat.label}
-                  </Badge>
-                ))}
-              </div>
-              
-              {tags.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {tags.map(tag => (
-                    <Badge
-                      key={tag.id}
-                      variant={selectedTags.includes(tag.id) ? "default" : "outline"}
-                      className={`cursor-pointer text-xs ${selectedTags.includes(tag.id) ? getTagColor(tag.id) : ""}`}
-                      onClick={() => toggleFilterTag(tag.id)}
-                      data-testid={`filter-tag-${tag.id}`}
-                    >
-                      <Tag className="w-3 h-3 mr-1" />
-                      {tag.name}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <div className="flex gap-2">
-          <div className="flex-1 space-y-2">
-            <div className="flex gap-2">
-              <Input
-                type="text"
-                value={textInput}
-                onChange={(e) => setTextInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Add thought..."
-                className="flex-1 bg-white/5 border-white/10 text-base placeholder:text-gray-600 focus:border-cyan-500/50"
-                data-testid="input-brain-dump"
-              />
-              
-              {supportsVoice && (
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={handleVoiceCapture}
-                  className={isListening ? "bg-destructive/20 text-destructive" : ""}
-                  data-testid="button-voice-capture"
-                >
-                  {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                </Button>
-              )}
-
-              <Popover open={showTagPopover} onOpenChange={setShowTagPopover}>
-                <PopoverTrigger asChild>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className={newTagIds.length > 0 ? "text-nebula-blue" : "text-muted-foreground"}
-                    data-testid="button-open-tags"
-                  >
-                    <Tag className="w-4 h-4" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-64 p-2" align="end">
-                  <div className="space-y-2">
-                    <div className="text-xs font-medium text-muted-foreground">Category</div>
-                    <div className="flex flex-wrap gap-1">
-                      {CATEGORIES.map(cat => (
-                        <Badge
-                          key={cat.value}
-                          variant={newCategory === cat.value ? "default" : "outline"}
-                          className={`cursor-pointer text-xs ${newCategory === cat.value ? "bg-nebula-blue/30" : ""}`}
-                          onClick={() => setNewCategory(newCategory === cat.value ? null : cat.value)}
-                          data-testid={`select-category-${cat.value}`}
-                        >
-                          <cat.icon className="w-3 h-3 mr-1" />
-                          {cat.label}
-                        </Badge>
-                      ))}
-                    </div>
-                    
-                    <div className="text-xs font-medium text-muted-foreground mt-2">Tags</div>
-                    <div className="flex flex-wrap gap-1">
-                      {tags.map(tag => (
-                        <Badge
-                          key={tag.id}
-                          variant={newTagIds.includes(tag.id) ? "default" : "outline"}
-                          className={`cursor-pointer text-xs ${newTagIds.includes(tag.id) ? getTagColor(tag.id) : ""}`}
-                          onClick={() => toggleNewTag(tag.id)}
-                          data-testid={`select-tag-${tag.id}`}
-                        >
-                          {tag.name}
-                        </Badge>
-                      ))}
-                    </div>
-                    
-                    <div className="flex gap-1 mt-2">
-                      <Input
-                        type="text"
-                        value={newTagName}
-                        onChange={(e) => setNewTagName(e.target.value)}
-                        placeholder="New tag..."
-                        className="h-7 text-xs"
-                        onKeyDown={(e) => e.key === "Enter" && handleCreateTag()}
-                        data-testid="input-new-tag"
-                      />
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={handleCreateTag}
-                        disabled={!newTagName.trim()}
-                        className="h-7"
-                        data-testid="button-create-tag"
-                      >
-                        <Plus className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
-              
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={handleAddEntry}
-                disabled={!textInput.trim()}
-                className="text-nebula-blue hover:text-nebula-blue"
-                data-testid="button-add-thought"
-              >
-                <Plus className="w-4 h-4" />
-              </Button>
-            </div>
-            
-            <AnimatePresence>
-              {(newCategory || newTagIds.length > 0) && (
-                <motion.div 
-                  className="flex flex-wrap gap-1"
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                >
-                  {newCategory && (
-                    <Badge variant="secondary" className="text-xs">
-                      {getCategoryIcon(newCategory)}
-                      <span className="ml-1">{CATEGORIES.find(c => c.value === newCategory)?.label}</span>
-                      <button onClick={() => setNewCategory(null)} className="ml-1 hover:text-destructive">
-                        <X className="w-3 h-3" />
-                      </button>
-                    </Badge>
-                  )}
-                  {newTagIds.map(tagId => (
-                    <Badge key={tagId} variant="secondary" className={`text-xs ${getTagColor(tagId)}`}>
-                      {getTagName(tagId)}
-                      <button onClick={() => toggleNewTag(tagId)} className="ml-1 hover:text-destructive">
-                        <X className="w-3 h-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
+              <Mic className="w-4 h-4" />
+            </motion.button>
+            <motion.button
+              onClick={handleAddThought}
+              className="p-2 hover:bg-white/10 rounded-lg transition text-blue-400"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              data-testid="button-add-thought"
+            >
+              <Plus className="w-4 h-4" />
+            </motion.button>
           </div>
         </div>
+      </div>
 
-        <div className="space-y-2 flex-1 overflow-y-auto pr-1 max-h-[300px] scrollbar-hide">
-          <AnimatePresence mode="popLayout">
-            {filteredEntries.length === 0 ? (
-              <motion.div 
-                className="text-center py-6 text-sm text-muted-foreground"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
+      {/* Thoughts List */}
+      <div className="flex-1 overflow-y-auto px-5 pb-5 space-y-2 relative z-10">
+        <AnimatePresence mode="popLayout">
+          {thoughts.map((thought, index) => {
+            const Icon = categoryIcons[thought.category];
+            const colorClass = categoryColors[thought.category];
+
+            return (
+              <motion.div
+                key={thought.id}
+                layout
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, x: -20, scale: 0.9 }}
+                transition={{ delay: index * 0.03, duration: 0.3 }}
+                className="relative p-4 border border-white/10 rounded-lg bg-white/5 hover:bg-white/10 transition group"
+                data-testid={`card-thought-${thought.id}`}
               >
-                {entries.length === 0 ? "Mind clear." : "No matching thoughts found."}
-              </motion.div>
-            ) : (
-              filteredEntries.map((entry, index) => (
-                <motion.div
-                  key={entry.id}
-                  data-testid={`card-brain-dump-${entry.id}`}
-                  className="p-2.5 rounded-lg bg-white/5 border border-white/5 hover:border-nebula-blue/30 transition-colors group"
-                  initial={{ opacity: 0, height: 0, y: -10 }}
-                  animate={{ opacity: 1, height: "auto", y: 0 }}
-                  exit={{ opacity: 0, height: 0, x: 20 }}
-                  transition={{ 
-                    type: "spring", 
-                    stiffness: 400, 
-                    damping: 30,
-                    delay: index * 0.02
-                  }}
-                  layout
-                >
-                  <div className="flex items-start gap-2">
-                    {entry.category && (
-                      <motion.div 
-                        className="mt-0.5"
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                      >
-                        {getCategoryIcon(entry.category)}
-                      </motion.div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-foreground leading-snug">{entry.text}</p>
-                      
-                      {(entry.tagIds && entry.tagIds.length > 0) && (
-                        <div className="flex flex-wrap gap-1 mt-1.5">
-                          {entry.tagIds.map(tagId => (
-                            <Badge
-                              key={tagId}
-                              variant="secondary"
-                              className={`text-xs cursor-pointer ${getTagColor(tagId)}`}
-                              onClick={() => toggleEntryTag(entry.id, entry.tagIds || [], tagId)}
-                              data-testid={`entry-tag-${entry.id}-${tagId}`}
-                            >
-                              {getTagName(tagId)}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
-                      
-                      <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
-                        <Clock className="w-3 h-3" />
-                        {formatTimestamp(entry.createdAt)}
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <button
-                            className="p-1 text-muted-foreground hover:text-nebula-blue transition-colors"
-                            data-testid={`button-edit-tags-${entry.id}`}
-                          >
-                            <Tag className="w-3.5 h-3.5" />
-                          </button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-48 p-2" align="end">
-                          <div className="space-y-2">
-                            <div className="text-xs font-medium text-muted-foreground">Edit Tags</div>
-                            <div className="flex flex-wrap gap-1">
-                              {tags.map(tag => (
-                                <Badge
-                                  key={tag.id}
-                                  variant={(entry.tagIds || []).includes(tag.id) ? "default" : "outline"}
-                                  className={`cursor-pointer text-xs ${(entry.tagIds || []).includes(tag.id) ? getTagColor(tag.id) : ""}`}
-                                  onClick={() => toggleEntryTag(entry.id, entry.tagIds || [], tag.id)}
-                                  data-testid={`toggle-entry-tag-${entry.id}-${tag.id}`}
-                                >
-                                  {tag.name}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                      
-                      <motion.button
-                        onClick={() => onArchive(entry.id)}
-                        className="p-1 text-muted-foreground hover:text-yellow-500 transition-colors"
-                        data-testid={`button-archive-${entry.id}`}
-                        whileTap={{ scale: 0.9 }}
-                      >
-                        <Archive className="w-3.5 h-3.5" />
-                      </motion.button>
-                      
-                      <motion.button
-                        onClick={() => onDelete(entry.id)}
-                        className="p-1 text-muted-foreground hover:text-destructive transition-colors"
-                        data-testid={`button-delete-thought-${entry.id}`}
-                        whileTap={{ scale: 0.9 }}
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </motion.button>
+                <div className="flex items-start gap-3">
+                  <Icon className={`w-4 h-4 flex-shrink-0 mt-0.5 ${colorClass}`} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground break-words">
+                      {thought.text}
+                    </p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className={`px-2 py-0.5 text-xs rounded border ${
+                        thought.category === "idea" 
+                          ? "bg-amber-500/10 text-amber-400 border-amber-500/30"
+                          : thought.category === "task"
+                          ? "bg-blue-500/10 text-blue-400 border-blue-500/30"
+                          : thought.category === "reminder"
+                          ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/30"
+                          : "bg-slate-500/10 text-slate-400 border-slate-500/30"
+                      }`}>
+                        {thought.category}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatTimestamp(thought.createdAt)}
+                      </span>
                     </div>
                   </div>
-                </motion.div>
-              ))
-            )}
-          </AnimatePresence>
-        </div>
-        
-        {entries.length > 0 && (
-          <motion.div 
-            className="text-center text-xs text-muted-foreground pt-1 border-t border-border/30"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-          >
-            {filteredEntries.length} of {entries.length} thoughts
-          </motion.div>
+                  <motion.button
+                    onClick={() => deleteThought(thought.id)}
+                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/20 rounded transition-all"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    data-testid={`button-delete-thought-${thought.id}`}
+                  >
+                    <Trash2 className="w-4 h-4 text-red-400" />
+                  </motion.button>
+                </div>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
+
+        {thoughts.length === 0 && (
+          <div className="text-center py-8 text-muted-foreground text-sm">
+            No thoughts yet. Add one above.
+          </div>
         )}
-      </CardContent>
+      </div>
+
+      {/* Footer */}
+      <div className="px-5 pb-4 pt-2 border-t border-white/5 relative z-10">
+        <div className="text-xs font-mono text-muted-foreground/60 tracking-wide">
+          {thoughts.length} thoughts captured
+        </div>
+      </div>
     </SpotlightCard>
   );
 }
+
+export default BrainDump;
