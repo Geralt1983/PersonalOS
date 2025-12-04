@@ -12,6 +12,8 @@ A personal energy management dashboard designed for exhausted parents (specifica
 client/
 ├── src/
 │   ├── components/
+│   │   ├── system-hud.tsx        # Fixed top status bar (monospace branding, time, streak)
+│   │   ├── the-deck.tsx          # Floating macOS-style dock for navigation
 │   │   ├── vitality-gauge.tsx    # Main energy state selector (hero component)
 │   │   ├── the-anchor.tsx        # Daily stabilizing habits with metallic toggles
 │   │   ├── the-construct.tsx     # Project tracker with multi-project support & templates
@@ -19,9 +21,10 @@ client/
 │   │   ├── momentum-widget.tsx   # Streak tracking and small-win celebration
 │   │   ├── energy-history.tsx    # Weekly heatmap and energy pattern insights
 │   │   ├── weekly-reflections.tsx # Weekly summaries and data export
-│   │   └── ui/                   # Shadcn components
+│   │   └── ui/
+│   │       └── spotlight-card.tsx # Mouse-tracking halo effect card wrapper
 │   ├── pages/
-│   │   └── dashboard.tsx         # Main dashboard with all modules
+│   │   └── dashboard.tsx         # Scroll-based dashboard with section navigation
 │   └── App.tsx                   # Application entry with routing
 server/
 ├── routes.ts                     # API endpoints
@@ -55,9 +58,28 @@ Cards use `backdrop-filter: blur(20px)` with translucent backgrounds for premium
 - **Font Family**: DM Sans, Inter (rounded, easy on tired eyes)
 - **Hierarchy**: Large headings for modules, smaller supporting text
 
+### Navigation Architecture (macOS-Inspired)
+
+#### SystemHUD (Top Bar)
+- Fixed transparent status bar with backdrop blur
+- Left: Green status indicator + "Sanctuary_OS v1.0" monospace branding
+- Right: Streak counter, connectivity icons, time display
+- Spring animation on mount (y: -48 to 0)
+
+#### TheDeck (Bottom Dock)
+- Floating macOS-style dock at bottom center
+- 7 navigation icons with physics-based hover scaling (1.15x lift effect)
+- Active state indicator (white dot) with layoutId animation
+- Icons: Vitality, Anchor, Brain Dump, Construct, History, Momentum, Reflect
+- Clicking an icon smooth-scrolls to the corresponding section
+
+### SpotlightCard
+All major module cards wrapped in SpotlightCard for premium mouse-tracking halo border effects using Framer Motion's useMotionValue.
+
 ### Layout
-- **Desktop**: 60/40 split (Vitality Gauge left, stacked modules right)
-- **Tablet/Mobile**: Single column, stacked layout
+- **Desktop/Mobile**: Single-column scroll-based layout with sections
+- **Navigation**: TheDeck at bottom for section navigation
+- **Spacing**: Each section has generous padding and min-height for visual breathing room
 
 ## Physics-Based Animations (Framer Motion)
 
