@@ -37,9 +37,10 @@ interface ProjectStepData {
 interface BrainDumpEntryData {
   id: number;
   text: string;
-  timestamp: string;
+  createdAt: Date;
   category: string | null;
   tagIds: number[] | null;
+  archivedAt: Date | null;
 }
 
 interface SanctuaryData {
