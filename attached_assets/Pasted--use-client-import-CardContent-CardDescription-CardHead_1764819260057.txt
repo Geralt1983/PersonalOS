@@ -1,9 +1,11 @@
-import { CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { SpotlightCard } from "@/components/ui/spotlight-card";
-import { Zap, Moon, Sun, ArrowRight } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { useEffect } from "react";
-import type { EnergyLevel, EnergyTask } from "@shared/schema";
+"use client"
+
+import { CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { SpotlightCard } from "@/components/ui/spotlight-card"
+import { Zap, Moon, Sun, ArrowRight } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
+import { useEffect } from "react"
+import type { EnergyLevel, EnergyTask } from "@shared/schema"
 
 const energyTasks: Record<EnergyLevel, EnergyTask[]> = {
   low: [
@@ -24,7 +26,7 @@ const energyTasks: Record<EnergyLevel, EnergyTask[]> = {
     { label: "Deep Project Work", duration: "2+ hours" },
     { label: "Deep Clean", duration: "45 min - 1 hour" },
   ],
-};
+}
 
 const energyConfig = {
   low: {
@@ -57,56 +59,56 @@ const energyConfig = {
     label: "High",
     message: "You're unstoppable.",
   },
-};
+}
 
 const identityAffirmations: Record<EnergyLevel, string> = {
   low: "You're grounded. You're present. Rest is productive.",
   medium: "You're steady. You're capable. Progress builds momentum.",
   high: "You're unstoppable. You're focused. This is your time.",
-};
+}
 
 const breathingVariants = {
   low: { scale: [1, 1.05, 1], opacity: [0.5, 0.8, 0.5] },
   medium: { scale: [1, 1.02, 1], opacity: [0.8, 1, 0.8] },
   high: { scale: [1, 1.1, 1], opacity: [0.9, 1, 0.9] },
-};
+}
 
 const breathingTransition = {
   low: { duration: 6, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" },
   medium: { duration: 4, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" },
   high: { duration: 0.5, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" },
-};
+}
 
 interface VitalityGaugeProps {
-  energyLevel: EnergyLevel;
-  streak: number;
-  onEnergyChange: (level: EnergyLevel) => void;
-  isUpdating?: boolean;
+  energyLevel: EnergyLevel
+  streak: number
+  onEnergyChange: (level: EnergyLevel) => void
+  isUpdating?: boolean
 }
 
 export function VitalityGauge({ energyLevel, streak, onEnergyChange, isUpdating }: VitalityGaugeProps) {
-  const config = energyConfig[energyLevel];
-  const Icon = config.icon;
+  const config = energyConfig[energyLevel]
+  const Icon = config.icon
 
   // Persist energy level to localStorage
   useEffect(() => {
     if (typeof window !== "undefined") {
       try {
-        localStorage.setItem("sanctuary-energy", energyLevel);
+        localStorage.setItem("sanctuary-energy", energyLevel)
       } catch (e) {
         // Silently fail if localStorage is unavailable
       }
     }
-  }, [energyLevel]);
+  }, [energyLevel])
 
   const handleCycle = () => {
-    const nextLevel: EnergyLevel = energyLevel === "low" ? "medium" : energyLevel === "medium" ? "high" : "low";
-    onEnergyChange(nextLevel);
+    const nextLevel: EnergyLevel = energyLevel === "low" ? "medium" : energyLevel === "medium" ? "high" : "low"
+    onEnergyChange(nextLevel)
 
     if (typeof navigator !== "undefined" && navigator.vibrate) {
-      navigator.vibrate(15);
+      navigator.vibrate(15)
     }
-  };
+  }
 
   return (
     <SpotlightCard className="h-full flex flex-col transition-all duration-500 relative overflow-hidden backdrop-blur-xl">
@@ -168,12 +170,12 @@ export function VitalityGauge({ energyLevel, streak, onEnergyChange, isUpdating 
 
             {/* Primary outer ring with glow */}
             <div
-              className="absolute inset-0 rounded-full border border-white/10 shadow-[0_0_40px_rgba(255,255,255,0.08),inset_0_0_40px_rgba(0,0,0,0.3)]"
+              className={`absolute inset-0 rounded-full border border-white/10 shadow-[0_0_40px_rgba(255,255,255,0.08),inset_0_0_40px_rgba(0,0,0,0.3)]`}
             />
 
             {/* Secondary depth ring */}
             <div
-              className="absolute inset-1 rounded-full border border-white/5 shadow-[inset_0_0_30px_rgba(0,0,0,0.4)]"
+              className={`absolute inset-1 rounded-full border border-white/5 shadow-[inset_0_0_30px_rgba(0,0,0,0.4)]`}
             />
 
             {/* Breathing glow layer */}
@@ -207,7 +209,6 @@ export function VitalityGauge({ energyLevel, streak, onEnergyChange, isUpdating 
                 ]
               `}
             >
-              {/* Highlight gradient overlay */}
               <div className="absolute inset-0 rounded-full bg-gradient-to-b from-white/8 via-transparent to-transparent pointer-events-none" />
 
               <motion.div
@@ -247,7 +248,7 @@ export function VitalityGauge({ energyLevel, streak, onEnergyChange, isUpdating 
             className="text-center"
           >
             <div className="text-xs text-gray-500 font-mono uppercase tracking-widest mb-2">Current_Protocol</div>
-            <div className="text-lg font-light text-cyan-100">
+            <div className={`text-lg font-light text-cyan-100`}>
               {energyLevel === "low" && "Disconnect. Hydrate. Breathe."}
               {energyLevel === "medium" && "Maintain flow. Clear small tasks."}
               {energyLevel === "high" && "Execute heavy lift. Build Sunroom."}
@@ -316,5 +317,5 @@ export function VitalityGauge({ energyLevel, streak, onEnergyChange, isUpdating 
         </div>
       </CardContent>
     </SpotlightCard>
-  );
+  )
 }
