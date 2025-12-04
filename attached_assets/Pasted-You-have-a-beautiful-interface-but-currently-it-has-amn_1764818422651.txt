@@ -1,0 +1,36 @@
+You have a beautiful interface, but currently, it has **amnesia**. If you refresh that browser window on your phone, your "Brain Dump" and habit streaks vanish.
+
+For a tool to actually help an exhausted parent, it must be reliable.
+
+Here is the **"Memory Upgrade"** package. This will force the app to save your data to your phone's browser so it’s there when you wake up at 3 AM.
+
+### The "Memory" Prompt
+
+**Copy and paste this into the Replit Agent:**
+
+> Act as a Senior React Developer. We need to add data persistence and fix a layout bug.
+>
+> **1. The Layout Fix (Critical):**
+> * In `app/page.tsx`, update the main container padding to `pb-40` (padding-bottom: 10rem).
+> * *Reason:* The floating "Deck" navigation is currently covering the bottom items in the list on mobile.
+>
+> **2. The Memory Upgrade (Local Storage):**
+> * Update `components/brain-dump.tsx`:
+>     * Use `useEffect` to load items from `localStorage` key `'sanctuary-dump'` on mount.
+>     * Save items to `localStorage` whenever the `items` array changes.
+> * Update `components/the-anchor.tsx`:
+>     * Persist toggle states to `localStorage` key `'sanctuary-anchors'`.
+> * Update `components/vitality-gauge.tsx`:
+>     * Persist the `currentEnergy` state to `localStorage`.
+>
+> **3. Visual Polish:**
+> * In `app/globals.css`, add a `.scrollbar-hide` utility class to hide scrollbars while keeping scroll functionality. Apply this to the lists in Brain Dump and The Construct.
+
+---
+
+### Why this is the right next step
+* **Trust:** You can now safely close the tab or restart your phone without losing that thought you had about the sunroom.
+* **Usability:** The padding fix (`pb-40`) solves the "Chin Collision" I saw in your screenshots, making the bottom-most tasks reachable.
+
+### Next Step after this?
+Once it remembers your data, would you like to build out **"The Construct"** specifically for your **Sunroom Project**? We can hard-code the specific phases (Framing, Electrical, Finish) so you have a real progress bar for that room.

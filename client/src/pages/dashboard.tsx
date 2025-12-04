@@ -292,7 +292,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-background selection:bg-cyan-500/30 overflow-x-hidden">
       <SystemHUD streak={data.energyState.streak} />
 
-      <main className="pt-16 pb-28 px-4 md:px-8 max-w-6xl mx-auto">
+      <main className="pt-16 pb-40 px-4 md:px-8 max-w-6xl mx-auto">
         <motion.section
           ref={gaugeRef}
           id="gauge"

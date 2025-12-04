@@ -387,7 +387,7 @@ export function BrainDump({ entries, tags, onAdd, onDelete, onUpdate, onArchive,
           </div>
         </div>
 
-        <div className="space-y-2 flex-1 overflow-y-auto pr-1 max-h-[300px]">
+        <div className="space-y-2 flex-1 overflow-y-auto pr-1 max-h-[300px] scrollbar-hide">
           <AnimatePresence mode="popLayout">
             {filteredEntries.length === 0 ? (
               <motion.div 

@@ -426,6 +426,15 @@
  * need to be distinguished from eachother visually.
  */
 @layer utilities {
+  /* Hide scrollbars for immersive scrolling (like native iOS apps) */
+  .scrollbar-hide {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
 
   /* Hide ugly search cancel button in Chrome until we can style it properly */
   input[type="search"]::-webkit-search-cancel-button {

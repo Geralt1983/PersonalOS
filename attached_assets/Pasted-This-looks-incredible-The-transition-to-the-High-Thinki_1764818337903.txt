@@ -1,0 +1,29 @@
+This looks incredible. The transition to the "High Thinking" mode paid off.
+
+The **Vitality Gauge** with that deep purple glow and the crisp typography on the **Anchor** toggles are exactly the "Billion Dollar" aesthetic we were aiming for. The dark mode with the subtle green accents feels premium and calm.
+
+However, looking at these screenshots as a Product Designer, I see **two specific friction points** that betray the "web app" roots. We need to fix these to make it feel like a native iOS app.
+
+### The Critique & The Fix
+
+**1. The "Chin" Collision**
+In the Brain Dump view, the floating Deck (the navigation bar) is covering the bottom of your list ("9 of 9 thoughts"). You can't comfortably read or tap the last item.
+* **The Fix:** We need to add massive bottom padding to the scrolling container so the content can scroll *above* the deck, leaving empty space behind the navigation.
+
+**2. The Ugly Scrollbar**
+In the Brain Dump card and Activity list, there is a visible grey scrollbar on the right. Native apps (like Apple Notes) hide this bar or make it invisible until you scroll. It breaks the immersion.
+
+---
+
+### The Polish Code (Fast Edit)
+
+You can run this in **Fast Edit** or regular chat. It’s a CSS-only fix.
+
+**Prompt:**
+> "Refine the styling to fix layout issues shown in testing:
+> 1. In `app/globals.css`, create a utility class called `.scrollbar-hide` that sets `scrollbar-width: none;` and ` -ms-overflow-style: none;` and `&::-webkit-scrollbar { display: none; }`.
+> 2. Apply this `.scrollbar-hide` class to the Brain Dump list and the Suggested Activities list in `VitalityGauge`.
+> 3. In `app/page.tsx`, increase the bottom padding of the `<main>` container to `pb-40` (padding-bottom 10rem). This ensures the last item in any list scrolls clearly above the floating Deck."
+
+### Why this matters
+Right now, you have a beautiful dashboard, but if you can't reach the bottom task because a button is covering it, you will subconsciously stop trusting the app. Adding that "empty space" at the bottom (the `pb-40`) gives the UI "breathing room" and makes it feel luxurious.

@@ -229,7 +229,7 @@ export function VitalityGauge({ energyLevel, streak, onEnergyChange, isUpdating 
           <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             Suggested Activities
           </div>
-          <motion.div className="space-y-2 max-h-48 overflow-y-auto pr-1 scrollbar-thin" layout>
+          <motion.div className="space-y-2 max-h-48 overflow-y-auto pr-1 scrollbar-hide" layout>
             <AnimatePresence mode="popLayout">
               {energyTasks[energyLevel].map((task, idx) => (
                 <motion.div
