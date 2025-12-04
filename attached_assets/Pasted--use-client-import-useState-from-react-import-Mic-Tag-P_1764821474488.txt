@@ -1,0 +1,139 @@
+"use client"
+
+import { useState } from "react"
+import { Mic, Tag, Plus, Filter, Lightbulb, File } from "lucide-react"
+
+interface Thought {
+  id: string
+  title: string
+  category?: string
+  timestamp: string
+  icon: "lightbulb" | "file"
+  tags?: string[]
+}
+
+const mockThoughts: Thought[] = [
+  {
+    id: "1",
+    title: "Test category fix",
+    category: "lightbulb",
+    timestamp: "12h ago",
+    icon: "lightbulb",
+  },
+  {
+    id: "2",
+    title: "Test category fix",
+    category: "lightbulb",
+    timestamp: "12h ago",
+    icon: "lightbulb",
+  },
+  {
+    id: "3",
+    title: "Test tagging oqoQW_",
+    timestamp: "12h ago",
+    icon: "file",
+    tags: ["sunroom"],
+  },
+  {
+    id: "4",
+    title: "Test idea Dze3WW",
+    timestamp: "12h ago",
+    icon: "lightbulb",
+  },
+]
+
+export default function BrainDump() {
+  const [thoughts, setThoughts] = useState(mockThoughts)
+  const [newThought, setNewThought] = useState("")
+
+  const handleAddThought = () => {
+    if (newThought.trim()) {
+      setThoughts([
+        {
+          id: Date.now().toString(),
+          title: newThought,
+          timestamp: "now",
+          icon: "lightbulb",
+        },
+        ...thoughts,
+      ])
+      setNewThought("")
+    }
+  }
+
+  return (
+    <div className="flex-1 border border-white/10 rounded-lg p-6 bg-zinc-950/50 backdrop-blur flex flex-col min-h-0">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <div className="flex items-center gap-3">
+            <Lightbulb className="w-5 h-5 text-blue-400" />
+            <h1 className="text-xl font-semibold">Brain_Dump</h1>
+          </div>
+          <p className="text-xs text-zinc-400 mt-1">Unload_your_mind</p>
+        </div>
+        <Filter className="w-5 h-5 text-zinc-400 cursor-pointer hover:text-white transition" />
+      </div>
+
+      {/* Input Area */}
+      <div className="mb-6">
+        <div className="flex items-center gap-2 bg-zinc-900/50 border border-white/10 rounded px-4 py-3">
+          <input
+            type="text"
+            placeholder="Add thought..."
+            value={newThought}
+            onChange={(e) => setNewThought(e.target.value)}
+            onKeyPress={(e) => e.key === "Enter" && handleAddThought()}
+            className="flex-1 bg-transparent outline-none placeholder-zinc-600 text-sm"
+          />
+          <div className="flex items-center gap-2">
+            <button className="p-1.5 hover:bg-white/10 rounded transition">
+              <Mic className="w-4 h-4 text-zinc-400" />
+            </button>
+            <button className="p-1.5 hover:bg-white/10 rounded transition">
+              <Tag className="w-4 h-4 text-zinc-400" />
+            </button>
+            <button onClick={handleAddThought} className="p-1.5 hover:bg-white/10 rounded transition">
+              <Plus className="w-4 h-4 text-zinc-400" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Thoughts List */}
+      <div className="flex-1 overflow-y-auto space-y-3">
+        {thoughts.map((thought) => (
+          <div
+            key={thought.id}
+            className="p-4 border border-white/10 rounded bg-zinc-900/30 hover:bg-zinc-900/50 transition cursor-pointer"
+          >
+            <div className="flex items-start gap-3">
+              {thought.icon === "lightbulb" ? (
+                <Lightbulb className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+              ) : (
+                <File className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-white break-words">{thought.title}</p>
+                <div className="flex items-center gap-2 mt-2">
+                  {thought.tags?.map((tag) => (
+                    <span
+                      key={tag}
+                      className="px-2 py-1 text-xs bg-blue-500/20 text-blue-400 rounded border border-blue-500/30"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                  <span className="text-xs text-zinc-500 flex items-center gap-1">🕐 {thought.timestamp}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Footer */}
+      <div className="text-xs text-zinc-500 mt-4 text-center">{thoughts.length} of 9 thoughts</div>
+    </div>
+  )
+}
