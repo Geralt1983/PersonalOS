@@ -318,10 +318,7 @@ export default function Dashboard() {
           viewport={{ once: true, amount: 0.3 }}
           transition={{ duration: 0.5 }}
         >
-          <TheAnchor 
-            anchors={anchorsForComponent} 
-            onToggle={handleAnchorToggle} 
-          />
+          <TheAnchor />
         </motion.section>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-8">
