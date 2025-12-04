@@ -1,0 +1,58 @@
+This is the right move. Using the "High Thinking" (Agent) mode is perfect for a complete architectural overhaul like this because it can handle multiple file dependencies at once without you having to manually copy-paste ten different files.
+Here is the "God Prompt" to paste into the Agent. It contains the full context, the dependencies, and the specific code for the "Billion Dollar" aesthetic we designed.
+The "God Prompt" for Sanctuary OS
+Copy and paste this entire block into the AI Agent:
+> Act as a Senior Frontend Architect. I need a complete overhaul of my Next.js application "Sanctuary OS" to achieve a "Billion Dollar App" aesthetic.
+> The Goal: A dark, OLED-friendly personal dashboard using "Organic Steel" aesthetics, physics-based animations, and a local-first feel.
+> Dependencies to Install:
+> Please run: npm install framer-motion lucide-react clsx tailwind-merge
+> Architecture Changes:
+>  * Navigation: Replace the sidebar/grid with "The Deck" (a floating macOS-style dock at the bottom).
+>  * Header: Replace the text header with "SystemHUD" (a minimal status bar).
+>  * Visuals: Wrap all cards in a "SpotlightCard" component (mouse-following halo effect).
+>  * Layout: Use a scroll-to-view section layout driven by The Deck.
+> Implementation Details (Use this specific code):
+> 1. app/globals.css (The Texture)
+> Add a noise texture and P3 colors:
+> @import "tailwindcss";
+> :root {
+>   --background: #050507;
+>   --foreground: #f5f5f5;
+> }
+> body {
+>   background-color: var(--background);
+>   color: var(--foreground);
+>   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
+> }
+> 
+> 2. components/ui/spotlight-card.tsx (The Halo)
+> Create this component. It tracks mouse movement to create a glowing border effect using framer-motion.
+> 3. components/the-deck.tsx (The Navigation)
+> Create a floating dock at the bottom center.
+>  * Imports: lucide-react (Activity, Anchor, BrainCircuit, Hammer).
+>  * Animation: Use framer-motion for magnification on hover (scale 1.1).
+>  * Props: Accepts currentView and onChangeView function.
+> 4. components/system-hud.tsx (The Header)
+> Create a fixed top bar with transparent background.
+>  * Left: "Sanctuary_OS v1.0" (Monospace font).
+>  * Right: Time and Battery icon.
+> 5. components/vitality-gauge.tsx (The Hero)
+>  * Wrap in SpotlightCard.
+>  * Implement "Breathing" animation on the central orb using framer-motion (scale up/down).
+>  * States: Low (Cyan), Medium (Blue), High (Purple).
+> 6. components/the-anchor.tsx (Habits)
+>  * Wrap in SpotlightCard.
+>  * Use spring physics for the toggle switches.
+> 7. components/brain-dump.tsx (Input)
+>  * Wrap in SpotlightCard.
+>  * Input field should be text-base to prevent iOS zoom.
+> 8. app/page.tsx (The Layout)
+>  * Layout: SystemHUD fixed at top. TheDeck fixed at bottom.
+>  * Main: A scrollable container holding the sections (gauge, anchor, brain, construct).
+>  * Logic: Clicking an icon in TheDeck should scroll the specific section into view (ref.scrollIntoView).
+> Execution:
+> Please implement these files and ensure the layout is responsive (mobile-first approach: Deck at bottom, content vertically stacked).
+> 
+What happens next?
+The Agent should read this, realize it needs to install framer-motion, and then systematically rewrite your page.tsx and create the component files.
+Once it finishes, hit the Run button. You should see the floating dock at the bottom. Hover over it to test the physics.

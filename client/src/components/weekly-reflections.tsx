@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -258,7 +259,7 @@ export function WeeklyReflections() {
 
   if (isLoading) {
     return (
-      <Card className="steel-card border-glow-purple/20">
+      <SpotlightCard className="steel-card border-glow-purple/20">
         <CardHeader>
           <Skeleton className="h-5 w-48" />
           <Skeleton className="h-4 w-32" />
@@ -267,13 +268,13 @@ export function WeeklyReflections() {
           <Skeleton className="h-24 w-full" />
           <Skeleton className="h-20 w-full" />
         </CardContent>
-      </Card>
+      </SpotlightCard>
     );
   }
 
   if (error || !reflection) {
     return (
-      <Card className="steel-card border-glow-purple/20">
+      <SpotlightCard className="steel-card border-glow-purple/20">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-glow-purple" />
@@ -286,12 +287,12 @@ export function WeeklyReflections() {
             Unable to load weekly reflection. Please try again later.
           </div>
         </CardContent>
-      </Card>
+      </SpotlightCard>
     );
   }
 
   return (
-    <Card className="steel-card border-glow-purple/20">
+    <SpotlightCard className="steel-card border-glow-purple/20">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -423,6 +424,6 @@ export function WeeklyReflections() {
           </>
         )}
       </CardContent>
-    </Card>
+    </SpotlightCard>
   );
 }

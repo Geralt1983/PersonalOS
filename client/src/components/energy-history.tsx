@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Activity, TrendingUp, Clock, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -160,7 +161,7 @@ export function EnergyHistory() {
 
   if (isLoading) {
     return (
-      <Card className="border-steel-700/50 bg-gradient-to-br from-steel-900 to-steel-800">
+      <SpotlightCard className="border-steel-700/50 bg-gradient-to-br from-steel-900 to-steel-800">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
             <Activity className="h-5 w-5 text-nebula-cyan" />
@@ -171,12 +172,12 @@ export function EnergyHistory() {
           <Skeleton className="h-48 w-full" />
           <Skeleton className="h-24 w-full" />
         </CardContent>
-      </Card>
+      </SpotlightCard>
     );
   }
 
   return (
-    <Card className="border-steel-700/50 bg-gradient-to-br from-steel-900 to-steel-800">
+    <SpotlightCard className="border-steel-700/50 bg-gradient-to-br from-steel-900 to-steel-800">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -375,7 +376,7 @@ export function EnergyHistory() {
           </div>
         )}
       </CardContent>
-    </Card>
+    </SpotlightCard>
   );
 }
 

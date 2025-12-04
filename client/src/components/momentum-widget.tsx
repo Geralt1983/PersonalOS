@@ -1,4 +1,5 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { TrendingUp, Flame, Star } from "lucide-react";
 import type { MomentumData } from "@shared/schema";
 
@@ -25,7 +26,7 @@ export function MomentumWidget({ data }: MomentumWidgetProps) {
   };
 
   return (
-    <Card className="steel-card border-nebula-cyan/20 h-fit">
+    <SpotlightCard className="steel-card border-nebula-cyan/20 h-fit">
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
           <TrendingUp className="w-4 h-4 text-nebula-cyan" />
@@ -95,6 +96,6 @@ export function MomentumWidget({ data }: MomentumWidgetProps) {
           </div>
         </div>
       </CardContent>
-    </Card>
+    </SpotlightCard>
   );
 }

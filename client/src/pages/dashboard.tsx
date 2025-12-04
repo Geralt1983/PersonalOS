@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { motion } from "framer-motion";
 import { VitalityGauge } from "@/components/vitality-gauge";
 import { TheAnchor } from "@/components/the-anchor";
 import { TheConstruct } from "@/components/the-construct";
@@ -7,6 +8,8 @@ import { BrainDump } from "@/components/brain-dump";
 import { MomentumWidget } from "@/components/momentum-widget";
 import { EnergyHistory } from "@/components/energy-history";
 import { WeeklyReflections } from "@/components/weekly-reflections";
+import { SystemHUD } from "@/components/system-hud";
+import { TheDeck, DeckView } from "@/components/the-deck";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { EnergyLevel, MomentumData, Project, ProjectStep, Tag, BrainDumpEntry } from "@shared/schema";
@@ -55,6 +58,33 @@ interface SanctuaryData {
 
 export default function Dashboard() {
   const [activeProjectId, setActiveProjectId] = useState<number | null>(null);
+  const [currentView, setCurrentView] = useState<DeckView>("gauge");
+  
+  const gaugeRef = useRef<HTMLDivElement>(null);
+  const anchorRef = useRef<HTMLDivElement>(null);
+  const brainRef = useRef<HTMLDivElement>(null);
+  const constructRef = useRef<HTMLDivElement>(null);
+  const historyRef = useRef<HTMLDivElement>(null);
+  const momentumRef = useRef<HTMLDivElement>(null);
+  const reflectionRef = useRef<HTMLDivElement>(null);
+
+  const refs: Record<DeckView, React.RefObject<HTMLDivElement>> = {
+    gauge: gaugeRef,
+    anchor: anchorRef,
+    brain: brainRef,
+    construct: constructRef,
+    history: historyRef,
+    momentum: momentumRef,
+    reflection: reflectionRef,
+  };
+
+  const handleViewChange = useCallback((view: DeckView) => {
+    setCurrentView(view);
+    const ref = refs[view];
+    if (ref.current) {
+      ref.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, []);
   
   const { data, isLoading, error } = useQuery<SanctuaryData>({
     queryKey: ["/api/sanctuary"],
@@ -212,26 +242,13 @@ export default function Dashboard() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background p-4 md:p-6 lg:p-8">
-        <header className="mb-6 md:mb-8">
-          <div className="flex items-center gap-3">
-            <Skeleton className="w-10 h-10 rounded-lg" />
-            <div>
-              <Skeleton className="h-6 w-32" />
-              <Skeleton className="h-4 w-48 mt-1" />
-            </div>
-          </div>
-        </header>
-        <main className="grid grid-cols-1 lg:grid-cols-5 gap-6 max-w-7xl mx-auto">
-          <div className="lg:col-span-3">
-            <Skeleton className="h-[500px] rounded-xl" />
-          </div>
-          <div className="lg:col-span-2 flex flex-col gap-6">
-            <Skeleton className="h-64 rounded-xl" />
-            <Skeleton className="h-72 rounded-xl" />
-            <Skeleton className="h-56 rounded-xl" />
-            <Skeleton className="h-48 rounded-xl" />
-          </div>
+      <div className="min-h-screen bg-background">
+        <div className="fixed top-0 left-0 right-0 h-12 bg-black/40 backdrop-blur-xl" />
+        <main className="pt-16 pb-24 px-4 md:px-8 max-w-6xl mx-auto space-y-6">
+          <Skeleton className="h-[400px] rounded-xl" />
+          <Skeleton className="h-64 rounded-xl" />
+          <Skeleton className="h-72 rounded-xl" />
+          <Skeleton className="h-56 rounded-xl" />
         </main>
       </div>
     );
@@ -253,14 +270,12 @@ export default function Dashboard() {
     queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "steps"] });
   };
 
-  // Transform data to match component props
   const anchorsForComponent = data.anchors.map(a => ({
     id: a.id,
     label: a.label,
     active: a.active,
   }));
 
-  // Use fetched project steps if we have an active project, otherwise use sanctuary data
   const stepsForComponent = (activeProjectId && projectSteps.length > 0 ? projectSteps : data.projectSteps).map(s => ({
     id: s.id,
     title: s.title,
@@ -274,78 +289,122 @@ export default function Dashboard() {
     : data.brainDumpEntries.filter(e => !(e as any).archivedAt);
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-6 lg:p-8">
-      <header className="mb-6 md:mb-8">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-nebula-cyan to-glow-purple flex items-center justify-center">
-            <span className="text-lg font-bold text-white">S</span>
-          </div>
-          <div>
-            <h1 className="text-xl md:text-2xl font-bold text-foreground tracking-tight" data-testid="text-app-title">
-              Sanctuary OS
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Your personal energy dashboard
-            </p>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-background selection:bg-cyan-500/30 overflow-x-hidden">
+      <SystemHUD streak={data.energyState.streak} />
 
-      <main className="grid grid-cols-1 lg:grid-cols-5 gap-6 max-w-7xl mx-auto">
-        {/* LEFT COL (Desktop) / BOTTOM (Mobile) - VitalityGauge */}
-        <div className="lg:col-span-3 flex flex-col gap-6 order-2 lg:order-1">
+      <main className="pt-16 pb-28 px-4 md:px-8 max-w-6xl mx-auto">
+        <motion.section
+          ref={gaugeRef}
+          id="gauge"
+          className="min-h-[70vh] flex flex-col justify-center py-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
           <VitalityGauge
             energyLevel={data.energyState.level}
             streak={data.energyState.streak}
             onEnergyChange={handleEnergyChange}
             isUpdating={logEnergyMutation.isPending}
           />
-          
-          <EnergyHistory />
-        </div>
+        </motion.section>
 
-        {/* RIGHT COL (Desktop) / TOP (Mobile) - High frequency toggles first */}
-        <div className="lg:col-span-2 flex flex-col gap-6 order-1 lg:order-2">
+        <motion.section
+          ref={anchorRef}
+          id="anchor"
+          className="py-8"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 0.5 }}
+        >
           <TheAnchor 
             anchors={anchorsForComponent} 
             onToggle={handleAnchorToggle} 
           />
-          
-          <div className="flex flex-col md:grid md:grid-cols-2 gap-6">
-            <div className="order-1 md:order-2">
-              <BrainDump
-                entries={brainDumpEntriesFiltered}
-                tags={tags}
-                onAdd={handleAddBrainDump}
-                onDelete={handleDeleteBrainDump}
-                onUpdate={handleUpdateBrainDump}
-                onArchive={handleArchiveBrainDump}
-                onCreateTag={handleCreateTag}
-              />
-            </div>
-            <div className="order-2 md:order-1">
-              <TheConstruct 
-                project={activeProject}
-                steps={stepsForComponent} 
-                onToggle={handleStepToggle}
-                onProjectChange={handleProjectChange}
-              />
-            </div>
-          </div>
-          
-          <MomentumWidget 
-            data={data.momentum} 
-          />
-          
-          <WeeklyReflections />
+        </motion.section>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-8">
+          <motion.section
+            ref={brainRef}
+            id="brain"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.5 }}
+          >
+            <BrainDump
+              entries={brainDumpEntriesFiltered}
+              tags={tags}
+              onAdd={handleAddBrainDump}
+              onDelete={handleDeleteBrainDump}
+              onUpdate={handleUpdateBrainDump}
+              onArchive={handleArchiveBrainDump}
+              onCreateTag={handleCreateTag}
+            />
+          </motion.section>
+
+          <motion.section
+            ref={constructRef}
+            id="construct"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+          >
+            <TheConstruct 
+              project={activeProject}
+              steps={stepsForComponent} 
+              onToggle={handleStepToggle}
+              onProjectChange={handleProjectChange}
+            />
+          </motion.section>
         </div>
+
+        <motion.section
+          ref={historyRef}
+          id="history"
+          className="py-8"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 0.5 }}
+        >
+          <EnergyHistory />
+        </motion.section>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-8">
+          <motion.section
+            ref={momentumRef}
+            id="momentum"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.5 }}
+          >
+            <MomentumWidget data={data.momentum} />
+          </motion.section>
+
+          <motion.section
+            ref={reflectionRef}
+            id="reflection"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+          >
+            <WeeklyReflections />
+          </motion.section>
+        </div>
+
+        <footer className="py-12 text-center">
+          <p className="text-xs text-muted-foreground italic font-mono">
+            "Match tasks to energy levels, not arbitrary ambition."
+          </p>
+        </footer>
       </main>
 
-      <footer className="mt-12 text-center text-xs text-muted-foreground">
-        <p className="italic">
-          "Match tasks to energy levels, not arbitrary ambition."
-        </p>
-      </footer>
+      <TheDeck currentView={currentView} onChangeView={handleViewChange} />
     </div>
   );
 }

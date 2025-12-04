@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -159,7 +160,7 @@ export function TheConstruct({ project, steps, onToggle, onProjectChange, onAddS
   const progress = steps.length > 0 ? Math.round((completedCount / steps.length) * 100) : 0;
 
   return (
-    <Card className="steel-card border-glow-purple/20 h-fit flex flex-col">
+    <SpotlightCard className="steel-card border-glow-purple/20 h-fit flex flex-col">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -481,6 +482,6 @@ export function TheConstruct({ project, steps, onToggle, onProjectChange, onAddS
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Card>
+    </SpotlightCard>
   );
 }
