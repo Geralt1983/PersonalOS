@@ -352,12 +352,7 @@ export default function Dashboard() {
             viewport={{ once: true, amount: 0.3 }}
             transition={{ duration: 0.5, delay: 0.1 }}
           >
-            <TheConstruct 
-              project={activeProject}
-              steps={stepsForComponent} 
-              onToggle={handleStepToggle}
-              onProjectChange={handleProjectChange}
-            />
+            <TheConstruct />
           </motion.section>
         </div>
 
