@@ -2,6 +2,7 @@ import { CardContent, CardDescription, CardHeader, CardTitle } from "@/component
 import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { Zap, Moon, Sun, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useEffect } from "react";
 import type { EnergyLevel, EnergyTask } from "@shared/schema";
 
 const energyTasks: Record<EnergyLevel, EnergyTask[]> = {
@@ -86,6 +87,17 @@ interface VitalityGaugeProps {
 export function VitalityGauge({ energyLevel, streak, onEnergyChange, isUpdating }: VitalityGaugeProps) {
   const config = energyConfig[energyLevel];
   const Icon = config.icon;
+
+  // Persist energy level to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('sanctuary-energy', energyLevel);
+      } catch (e) {
+        // Silently fail if localStorage is unavailable
+      }
+    }
+  }, [energyLevel]);
 
   const handleCycle = () => {
     const nextLevel: EnergyLevel = energyLevel === "low" ? "medium" : energyLevel === "medium" ? "high" : "low";

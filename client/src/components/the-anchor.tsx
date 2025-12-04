@@ -2,6 +2,7 @@ import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { Anchor as AnchorIcon, Droplets, Smartphone, BookOpen } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useEffect } from "react";
 
 const anchorIcons: Record<number, typeof Droplets> = {
   1: Droplets,
@@ -22,6 +23,18 @@ interface TheAnchorProps {
 
 export function TheAnchor({ anchors, onToggle }: TheAnchorProps) {
   const activeCount = anchors.filter((a) => a.active).length;
+
+  // Persist anchor states to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const anchorStates = anchors.map(a => ({ id: a.id, active: a.active }));
+        localStorage.setItem('sanctuary-anchors', JSON.stringify(anchorStates));
+      } catch (e) {
+        // Silently fail if localStorage is unavailable
+      }
+    }
+  }, [anchors]);
 
   const handleToggle = (id: number) => {
     onToggle(id);

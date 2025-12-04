@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,17 @@ export function BrainDump({ entries, tags, onAdd, onDelete, onUpdate, onArchive,
   const [showTagPopover, setShowTagPopover] = useState(false);
   const [newTagName, setNewTagName] = useState("");
   const recognitionRef = useRef<any>(null);
+
+  // Persist entries to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('sanctuary-dump', JSON.stringify(entries));
+      } catch (e) {
+        // Silently fail if localStorage is unavailable
+      }
+    }
+  }, [entries]);
 
   const handleAddEntry = () => {
     if (!textInput.trim()) return;
