@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Plus, Check, Circle, Trash2, Hammer } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Task {
   id: number;
@@ -45,7 +46,7 @@ export function TheConstruct() {
     }
   }, [tasks, isLoaded]);
 
-  const addTask = (e?: React.FormEvent) => {
+  const addTask = useCallback((e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!inputValue.trim()) return;
 
@@ -56,23 +57,49 @@ export function TheConstruct() {
     };
     
     // Add to end of list
-    setTasks([...tasks, newTask]);
+    setTasks(prev => [...prev, newTask]);
     setInputValue("");
-  };
+  }, [inputValue]);
 
-  const toggleTask = (id: number) => {
-    setTasks(tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
-  };
+  const toggleTask = useCallback((id: number) => {
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
+  }, []);
 
-  const deleteTask = (id: number, e: React.MouseEvent) => {
+  const deleteTask = useCallback((id: number, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent toggling when clicking delete
-    setTasks(tasks.filter(t => t.id !== id));
-  };
+    setTasks(prev => prev.filter(t => t.id !== id));
+  }, []);
 
   // Calculate Progress
   const total = tasks.length;
   const completed = tasks.filter(t => t.completed).length;
   const progress = total === 0 ? 0 : Math.round((completed / total) * 100);
+
+  // Show loading skeleton while data loads from localStorage
+  if (!isLoaded) {
+    return (
+      <div className="flex-1 border border-white/10 rounded-lg p-6 bg-zinc-950/50 backdrop-blur flex flex-col min-h-0 h-full">
+        <div className="mb-6">
+          <div className="flex items-center gap-3 mb-3">
+            <Skeleton className="w-5 h-5" />
+            <Skeleton className="h-6 w-32" />
+          </div>
+          <Skeleton className="h-1 w-full rounded-full mb-2" />
+          <div className="flex justify-end">
+            <Skeleton className="h-4 w-20" />
+          </div>
+        </div>
+        <div className="mb-6">
+          <Skeleton className="h-12 w-full rounded" />
+        </div>
+        <div className="flex-1 space-y-3">
+          {[1, 2].map((i) => (
+            <Skeleton key={i} className="h-14 w-full rounded" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 border border-white/10 rounded-lg p-6 bg-zinc-950/50 backdrop-blur flex flex-col min-h-0 h-full">

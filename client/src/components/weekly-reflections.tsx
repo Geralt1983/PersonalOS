@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SpotlightCard } from "@/components/ui/spotlight-card";
@@ -79,7 +79,7 @@ function getRestInsight(patterns: EnergyPattern[]): string {
 }
 
 export function WeeklyReflections() {
-  const [currentWeekStart, setCurrentWeekStart] = useState<string>(getStartOfWeek());
+  const [currentWeekStart, setCurrentWeekStart] = useState<string>(() => getStartOfWeek());
 
   const { data: reflection, isLoading, error } = useQuery<WeeklyReflection>({
     queryKey: ["/api/reflection", currentWeekStart],
@@ -90,22 +90,27 @@ export function WeeklyReflections() {
     },
   });
 
-  const goToPreviousWeek = () => {
-    const date = new Date(currentWeekStart);
-    date.setDate(date.getDate() - 7);
-    setCurrentWeekStart(date.toISOString().split("T")[0]);
-  };
+  const goToPreviousWeek = useCallback(() => {
+    setCurrentWeekStart(prev => {
+      const date = new Date(prev);
+      date.setDate(date.getDate() - 7);
+      return date.toISOString().split("T")[0];
+    });
+  }, []);
 
-  const goToNextWeek = () => {
-    const date = new Date(currentWeekStart);
-    date.setDate(date.getDate() + 7);
-    const today = getStartOfWeek();
-    if (date.toISOString().split("T")[0] <= today) {
-      setCurrentWeekStart(date.toISOString().split("T")[0]);
-    }
-  };
+  const goToNextWeek = useCallback(() => {
+    setCurrentWeekStart(prev => {
+      const date = new Date(prev);
+      date.setDate(date.getDate() + 7);
+      const today = getStartOfWeek();
+      if (date.toISOString().split("T")[0] <= today) {
+        return date.toISOString().split("T")[0];
+      }
+      return prev;
+    });
+  }, []);
 
-  const handleExportJSON = async () => {
+  const handleExportJSON = useCallback(async () => {
     try {
       const res = await fetch("/api/export", { credentials: "include" });
       if (!res.ok) throw new Error("Export failed");
@@ -124,9 +129,9 @@ export function WeeklyReflections() {
     } catch (error) {
       console.error("Export failed:", error);
     }
-  };
+  }, []);
 
-  const handleExportCSV = async () => {
+  const handleExportCSV = useCallback(async () => {
     try {
       const res = await fetch("/api/export", { credentials: "include" });
       if (!res.ok) throw new Error("Export failed");
@@ -253,9 +258,22 @@ export function WeeklyReflections() {
     } catch (error) {
       console.error("CSV export failed:", error);
     }
-  };
+  }, []);
 
-  const isCurrentWeek = currentWeekStart === getStartOfWeek();
+  const isCurrentWeek = useMemo(
+    () => currentWeekStart === getStartOfWeek(),
+    [currentWeekStart]
+  );
+
+  const peakEnergyInsight = useMemo(
+    () => reflection ? getPeakEnergyInsight(reflection.energyPatterns) : "",
+    [reflection]
+  );
+
+  const restInsight = useMemo(
+    () => reflection ? getRestInsight(reflection.energyPatterns) : "",
+    [reflection]
+  );
 
   if (isLoading) {
     return (
@@ -373,11 +391,11 @@ export function WeeklyReflections() {
               <div className="p-3 rounded-lg steel-surface border border-border/30 space-y-2">
                 <div className="flex items-start gap-2">
                   <BarChart3 className="w-4 h-4 mt-0.5 text-green-400 shrink-0" />
-                  <p className="text-sm text-foreground">{getPeakEnergyInsight(reflection.energyPatterns)}</p>
+                  <p className="text-sm text-foreground">{peakEnergyInsight}</p>
                 </div>
                 <div className="flex items-start gap-2">
                   <BarChart3 className="w-4 h-4 mt-0.5 text-yellow-400 shrink-0" />
-                  <p className="text-sm text-foreground">{getRestInsight(reflection.energyPatterns)}</p>
+                  <p className="text-sm text-foreground">{restInsight}</p>
                 </div>
               </div>
             </div>

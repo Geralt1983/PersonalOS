@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { TrendingUp, Flame, Star } from "lucide-react";
@@ -9,21 +10,35 @@ interface MomentumWidgetProps {
 
 export function MomentumWidget({ data }: MomentumWidgetProps) {
   const { completedToday, weeklyCompletion, weeklyTarget, streak } = data;
-  const completionPercentage = Math.round((weeklyCompletion / weeklyTarget) * 100);
   
-  const getMessage = () => {
+  const completionPercentage = useMemo(
+    () => Math.round((weeklyCompletion / weeklyTarget) * 100),
+    [weeklyCompletion, weeklyTarget]
+  );
+  
+  const message = useMemo(() => {
     if (completionPercentage >= 80) return "You're crushing it.";
     if (completionPercentage >= 60) return "Strong momentum building.";
     if (completionPercentage >= 40) return "Solid progress. Keep going.";
     return "Every step counts. Build it up.";
-  };
+  }, [completionPercentage]);
 
-  const getStreakMessage = () => {
+  const streakMessage = useMemo(() => {
     if (streak >= 14) return "Two weeks strong. Unstoppable.";
     if (streak >= 7) return "A full week. You're consistent.";
     if (streak >= 3) return "Building momentum.";
     return "Start the streak.";
-  };
+  }, [streak]);
+
+  const todayWinsArray = useMemo(
+    () => Array.from({ length: Math.min(completedToday, 10) }),
+    [completedToday]
+  );
+
+  const emptyWinsArray = useMemo(
+    () => Array.from({ length: Math.max(0, 10 - completedToday) }),
+    [completedToday]
+  );
 
   return (
     <SpotlightCard className="steel-card border-nebula-cyan/20 h-fit">
@@ -53,7 +68,7 @@ export function MomentumWidget({ data }: MomentumWidgetProps) {
             <span className="text-lg font-bold text-glow-purple" data-testid="text-todays-wins">{completedToday}</span>
           </div>
           <div className="flex gap-1">
-            {Array.from({ length: Math.min(completedToday, 10) }).map((_, i) => (
+            {todayWinsArray.map((_, i) => (
               <div 
                 key={i} 
                 className="flex-1 h-2 rounded-full bg-glow-purple/60"
@@ -63,7 +78,7 @@ export function MomentumWidget({ data }: MomentumWidgetProps) {
                 }}
               />
             ))}
-            {Array.from({ length: Math.max(0, 10 - completedToday) }).map((_, i) => (
+            {emptyWinsArray.map((_, i) => (
               <div key={`empty-${i}`} className="flex-1 h-2 rounded-full bg-steel-light/30" />
             ))}
           </div>
@@ -89,10 +104,10 @@ export function MomentumWidget({ data }: MomentumWidgetProps) {
         <div className="pt-3 border-t border-border/30 space-y-2">
           <div className="flex items-center gap-2 text-xs text-nebula-cyan/80 italic">
             <Star className="w-3 h-3" />
-            {getMessage()}
+            {message}
           </div>
           <div className="text-xs text-muted-foreground italic">
-            {getStreakMessage()}
+            {streakMessage}
           </div>
         </div>
       </CardContent>

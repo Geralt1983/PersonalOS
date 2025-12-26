@@ -2,7 +2,7 @@ import { CardContent, CardDescription, CardHeader, CardTitle } from "@/component
 import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { Zap, Moon, Sun, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useEffect } from "react";
+import { useEffect, useCallback, useMemo } from "react";
 import type { EnergyLevel, EnergyTask } from "@shared/schema";
 
 const energyTasks: Record<EnergyLevel, EnergyTask[]> = {
@@ -85,8 +85,10 @@ interface VitalityGaugeProps {
 }
 
 export function VitalityGauge({ energyLevel, streak, onEnergyChange, isUpdating }: VitalityGaugeProps) {
-  const config = energyConfig[energyLevel];
+  const config = useMemo(() => energyConfig[energyLevel], [energyLevel]);
   const Icon = config.icon;
+  const currentTasks = useMemo(() => energyTasks[energyLevel], [energyLevel]);
+  const affirmation = useMemo(() => identityAffirmations[energyLevel], [energyLevel]);
 
   // Persist energy level to localStorage
   useEffect(() => {
@@ -99,14 +101,14 @@ export function VitalityGauge({ energyLevel, streak, onEnergyChange, isUpdating 
     }
   }, [energyLevel]);
 
-  const handleCycle = () => {
+  const handleCycle = useCallback(() => {
     const nextLevel: EnergyLevel = energyLevel === "low" ? "medium" : energyLevel === "medium" ? "high" : "low";
     onEnergyChange(nextLevel);
 
     if (typeof navigator !== "undefined" && navigator.vibrate) {
       navigator.vibrate(15);
     }
-  };
+  }, [energyLevel, onEnergyChange]);
 
   return (
     <SpotlightCard className="h-full flex flex-col transition-all duration-500 relative overflow-hidden backdrop-blur-xl">
@@ -276,7 +278,7 @@ export function VitalityGauge({ energyLevel, streak, onEnergyChange, isUpdating 
               className={`text-sm italic ${config.color}/80`}
               data-testid="text-affirmation"
             >
-              {identityAffirmations[energyLevel]}
+              {affirmation}
             </motion.div>
           </AnimatePresence>
         </motion.div>
@@ -287,7 +289,7 @@ export function VitalityGauge({ energyLevel, streak, onEnergyChange, isUpdating 
           </div>
           <motion.div className="space-y-2 max-h-48 overflow-y-auto pr-1 scrollbar-hide" layout>
             <AnimatePresence mode="popLayout">
-              {energyTasks[energyLevel].map((task, idx) => (
+              {currentTasks.map((task, idx) => (
                 <motion.div
                   key={`${energyLevel}-${idx}`}
                   data-testid={`card-task-${idx}`}

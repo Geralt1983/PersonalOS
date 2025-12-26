@@ -4,7 +4,7 @@ import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Activity, TrendingUp, Clock, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import type { EnergyLevel, EnergyLog, EnergyPattern } from "@shared/schema";
 
 interface EnergyLogData {
@@ -57,7 +57,7 @@ function formatHour(hour: number): string {
   return `${hour - 12}p`;
 }
 
-function getWeekDates(offset: number = 0): { start: Date; end: Date; label: string } {
+const getWeekDates = (offset: number = 0): { start: Date; end: Date; label: string } => {
   const now = new Date();
   const dayOfWeek = now.getDay();
   const startOfThisWeek = new Date(now);
@@ -75,14 +75,19 @@ function getWeekDates(offset: number = 0): { start: Date; end: Date; label: stri
       : `${startOfThisWeek.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${endOfWeek.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
   
   return { start: startOfThisWeek, end: endOfWeek, label };
-}
+};
 
 export function EnergyHistory() {
   const [weekOffset, setWeekOffset] = useState(0);
-  const { start, end, label } = getWeekDates(weekOffset);
   
-  const startDate = start.toISOString().split("T")[0];
-  const endDate = end.toISOString().split("T")[0];
+  const { start, end, label, startDate, endDate } = useMemo(() => {
+    const weekData = getWeekDates(weekOffset);
+    return {
+      ...weekData,
+      startDate: weekData.start.toISOString().split("T")[0],
+      endDate: weekData.end.toISOString().split("T")[0],
+    };
+  }, [weekOffset]);
   
   const { data: logs, isLoading: logsLoading, refetch: refetchLogs } = useQuery<EnergyLogData[]>({
     queryKey: ["/api/energy/logs", startDate, endDate],
@@ -109,55 +114,64 @@ export function EnergyHistory() {
   const isLoading = logsLoading || patternsLoading;
 
   // Build heatmap data from logs - aggregate all logs per day/hour
-  const heatmapData: Map<string, HeatmapCell> = new Map();
-  let maxCount = 1;
-  
-  if (logs) {
-    for (const log of logs) {
-      const date = new Date(log.loggedAt);
-      const key = `${date.getDay()}-${date.getHours()}`;
-      
-      let cell = heatmapData.get(key);
-      if (!cell) {
-        cell = { 
-          levels: { low: 0, medium: 0, high: 0 }, 
-          total: 0, 
-          dominantLevel: log.level 
-        };
-        heatmapData.set(key, cell);
+  const { heatmapData, maxCount } = useMemo(() => {
+    const data = new Map<string, HeatmapCell>();
+    let max = 1;
+    
+    if (logs) {
+      for (const log of logs) {
+        const date = new Date(log.loggedAt);
+        const key = `${date.getDay()}-${date.getHours()}`;
+        
+        let cell = data.get(key);
+        if (!cell) {
+          cell = { 
+            levels: { low: 0, medium: 0, high: 0 }, 
+            total: 0, 
+            dominantLevel: log.level 
+          };
+          data.set(key, cell);
+        }
+        
+        cell.levels[log.level]++;
+        cell.total++;
+        
+        // Recalculate dominant level
+        const counts = cell.levels;
+        if (counts.high >= counts.medium && counts.high >= counts.low) {
+          cell.dominantLevel = "high";
+        } else if (counts.medium >= counts.low) {
+          cell.dominantLevel = "medium";
+        } else {
+          cell.dominantLevel = "low";
+        }
+        
+        max = Math.max(max, cell.total);
       }
-      
-      cell.levels[log.level]++;
-      cell.total++;
-      
-      // Recalculate dominant level
-      const counts = cell.levels;
-      if (counts.high >= counts.medium && counts.high >= counts.low) {
-        cell.dominantLevel = "high";
-      } else if (counts.medium >= counts.low) {
-        cell.dominantLevel = "medium";
-      } else {
-        cell.dominantLevel = "low";
-      }
-      
-      maxCount = Math.max(maxCount, cell.total);
     }
-  }
+    
+    return { heatmapData: data, maxCount: max };
+  }, [logs]);
 
   // Also use patterns data to highlight best times if available
-  const patternHints: Map<string, EnergyLevel> = new Map();
-  if (patterns) {
-    for (const p of patterns) {
-      const key = `${p.dayOfWeek}-${p.hour}`;
-      patternHints.set(key, p.dominantLevel);
+  const patternHints = useMemo(() => {
+    const hints = new Map<string, EnergyLevel>();
+    if (patterns) {
+      for (const p of patterns) {
+        const key = `${p.dayOfWeek}-${p.hour}`;
+        hints.set(key, p.dominantLevel);
+      }
     }
-  }
+    return hints;
+  }, [patterns]);
 
   // Calculate insights from patterns
-  const insights = patterns ? calculateInsights(patterns) : null;
+  const insights = useMemo(() => {
+    return patterns ? calculateInsights(patterns) : null;
+  }, [patterns]);
 
   // Recent logs for timeline
-  const recentLogs = logs?.slice(0, 10) || [];
+  const recentLogs = useMemo(() => logs?.slice(0, 10) || [], [logs]);
 
   if (isLoading) {
     return (

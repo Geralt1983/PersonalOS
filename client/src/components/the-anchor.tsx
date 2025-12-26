@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Droplet, Smartphone, BookOpen, Anchor as AnchorIcon } from "lucide-react";
 import { SpotlightCard } from "@/components/ui/spotlight-card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Habit {
   id: string;
@@ -70,15 +71,41 @@ export function TheAnchor() {
     }
   }, [habits, isLoaded]);
 
-  const toggleHabit = (id: string) => {
-    setHabits(habits.map(h => (h.id === id ? { ...h, completed: !h.completed } : h)));
+  const toggleHabit = useCallback((id: string) => {
+    setHabits(prev => prev.map(h => (h.id === id ? { ...h, completed: !h.completed } : h)));
     
     if (typeof navigator !== "undefined" && navigator.vibrate) {
       navigator.vibrate(10);
     }
-  };
+  }, []);
 
   const completedCount = habits.filter(h => h.completed).length;
+
+  // Show loading skeleton while data loads from localStorage
+  if (!isLoaded) {
+    return (
+      <SpotlightCard className="overflow-hidden relative backdrop-blur-xl">
+        <div className="p-5 pb-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Skeleton className="w-5 h-5 rounded" />
+              <Skeleton className="h-4 w-24" />
+            </div>
+            <Skeleton className="h-6 w-12 rounded" />
+          </div>
+          <Skeleton className="h-1 w-full rounded-full" />
+        </div>
+        <div className="px-5 pb-5 space-y-3">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-16 w-full rounded-lg" />
+          ))}
+        </div>
+        <div className="px-5 pb-4 pt-2 border-t border-white/5">
+          <Skeleton className="h-3 w-48" />
+        </div>
+      </SpotlightCard>
+    );
+  }
 
   return (
     <SpotlightCard className="overflow-hidden relative backdrop-blur-xl">

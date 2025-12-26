@@ -1,12 +1,13 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { 
   Mic, MicOff, Plus, X, Clock, Search, Tag, 
-  Lightbulb, CheckCircle, Bell, FileText, Filter, Archive
+  Lightbulb, CheckCircle, Bell, FileText, Filter, Archive, AlertCircle
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Tag as TagType, BrainDumpEntry } from "@shared/schema";
 
@@ -30,6 +31,7 @@ const CATEGORIES = [
 export function BrainDump({ entries, tags, onAdd, onDelete, onUpdate, onArchive, onCreateTag }: BrainDumpProps) {
   const [textInput, setTextInput] = useState("");
   const [isListening, setIsListening] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedTags, setSelectedTags] = useState<number[]>([]);
@@ -39,6 +41,7 @@ export function BrainDump({ entries, tags, onAdd, onDelete, onUpdate, onArchive,
   const [showTagPopover, setShowTagPopover] = useState(false);
   const [newTagName, setNewTagName] = useState("");
   const recognitionRef = useRef<any>(null);
+  const { toast } = useToast();
 
   // Persist entries to localStorage
   useEffect(() => {
@@ -66,8 +69,13 @@ export function BrainDump({ entries, tags, onAdd, onDelete, onUpdate, onArchive,
     }
   };
 
-  const handleVoiceCapture = () => {
+  const handleVoiceCapture = useCallback(() => {
     if (!("webkitSpeechRecognition" in window || "SpeechRecognition" in window)) {
+      toast({
+        title: "Voice input not supported",
+        description: "Your browser doesn't support voice input. Try Chrome or Edge.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -78,24 +86,71 @@ export function BrainDump({ entries, tags, onAdd, onDelete, onUpdate, onArchive,
       recognitionRef.current.continuous = false;
       recognitionRef.current.interimResults = false;
       
-      recognitionRef.current.onstart = () => setIsListening(true);
+      recognitionRef.current.onstart = () => {
+        setIsListening(true);
+        setVoiceError(null);
+      };
+      
       recognitionRef.current.onend = () => setIsListening(false);
-      recognitionRef.current.onerror = () => setIsListening(false);
+      
+      recognitionRef.current.onerror = (event: any) => {
+        setIsListening(false);
+        let errorMessage = "Voice capture failed";
+        
+        switch (event.error) {
+          case "no-speech":
+            errorMessage = "No speech detected. Please try again.";
+            break;
+          case "audio-capture":
+            errorMessage = "No microphone found. Please check your settings.";
+            break;
+          case "not-allowed":
+            errorMessage = "Microphone access denied. Please allow microphone access.";
+            break;
+          case "network":
+            errorMessage = "Network error. Please check your connection.";
+            break;
+          case "aborted":
+            // User cancelled, no need to show error
+            return;
+          default:
+            errorMessage = `Voice error: ${event.error}`;
+        }
+        
+        setVoiceError(errorMessage);
+        toast({
+          title: "Voice capture error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      };
       
       recognitionRef.current.onresult = (event: any) => {
         const transcript = Array.from(event.results)
           .map((result: any) => result[0].transcript)
           .join("");
         setTextInput(prev => prev + (prev ? " " : "") + transcript);
+        toast({
+          title: "Voice captured",
+          description: "Your speech has been added to the input.",
+        });
       };
     }
 
     if (isListening) {
       recognitionRef.current.stop();
     } else {
-      recognitionRef.current.start();
+      try {
+        recognitionRef.current.start();
+      } catch (error) {
+        toast({
+          title: "Voice capture error",
+          description: "Failed to start voice capture. Please try again.",
+          variant: "destructive",
+        });
+      }
     }
-  };
+  }, [isListening, toast]);
 
   const handleCreateTag = () => {
     if (!newTagName.trim()) return;
@@ -128,45 +183,47 @@ export function BrainDump({ entries, tags, onAdd, onDelete, onUpdate, onArchive,
 
   const supportsVoice = typeof window !== "undefined" && ("webkitSpeechRecognition" in window || "SpeechRecognition" in window);
 
-  const filteredEntries = entries.filter(entry => {
-    if (searchQuery) {
-      if (!entry.text.toLowerCase().includes(searchQuery.toLowerCase())) {
+  const filteredEntries = useMemo(() => {
+    return entries.filter(entry => {
+      if (searchQuery) {
+        if (!entry.text.toLowerCase().includes(searchQuery.toLowerCase())) {
+          return false;
+        }
+      }
+      if (selectedCategory && entry.category !== selectedCategory) {
         return false;
       }
-    }
-    if (selectedCategory && entry.category !== selectedCategory) {
-      return false;
-    }
-    if (selectedTags.length > 0) {
-      const entryTags = entry.tagIds || [];
-      if (!selectedTags.some(tagId => entryTags.includes(tagId))) {
-        return false;
+      if (selectedTags.length > 0) {
+        const entryTags = entry.tagIds || [];
+        if (!selectedTags.some(tagId => entryTags.includes(tagId))) {
+          return false;
+        }
       }
-    }
-    return true;
-  });
+      return true;
+    });
+  }, [entries, searchQuery, selectedCategory, selectedTags]);
 
-  const getCategoryIcon = (category: string | null) => {
+  const getCategoryIcon = useCallback((category: string | null) => {
     const cat = CATEGORIES.find(c => c.value === category);
     if (!cat) return null;
     const Icon = cat.icon;
     return <Icon className={`w-4 h-4 ${cat.color} flex-shrink-0`} />;
-  };
+  }, []);
 
-  const getTagName = (tagId: number) => {
+  const getTagName = useCallback((tagId: number) => {
     return tags.find(t => t.id === tagId)?.name || "Unknown";
-  };
+  }, [tags]);
 
-  const getTagColor = (tagId: number) => {
+  const getTagColor = useCallback((tagId: number) => {
     const tag = tags.find(t => t.id === tagId);
     if (!tag?.color) return "bg-blue-500/20 text-blue-400 border-blue-500/30";
     if (tag.color === "nebula-cyan") return "bg-cyan-500/20 text-cyan-400 border-cyan-500/30";
     if (tag.color === "nebula-blue") return "bg-blue-500/20 text-blue-400 border-blue-500/30";
     if (tag.color === "nebula-purple") return "bg-purple-500/20 text-purple-400 border-purple-500/30";
     return "bg-blue-500/20 text-blue-400 border-blue-500/30";
-  };
+  }, [tags]);
 
-  const formatTimestamp = (date: Date | string) => {
+  const formatTimestamp = useCallback((date: Date | string) => {
     const d = new Date(date);
     const now = new Date();
     const diffMs = now.getTime() - d.getTime();
@@ -179,7 +236,7 @@ export function BrainDump({ entries, tags, onAdd, onDelete, onUpdate, onArchive,
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
     return d.toLocaleDateString();
-  };
+  }, []);
 
   return (
     <div className="flex-1 border border-white/10 rounded-lg p-6 bg-zinc-950/50 backdrop-blur flex flex-col min-h-0 h-full">

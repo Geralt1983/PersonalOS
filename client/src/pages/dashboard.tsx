@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { VitalityGauge } from "@/components/vitality-gauge";
@@ -11,6 +11,7 @@ import { WeeklyReflections } from "@/components/weekly-reflections";
 import { SystemHUD } from "@/components/system-hud";
 import { TheDeck, DeckView } from "@/components/the-deck";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SectionErrorBoundary } from "@/components/error-boundary";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { EnergyLevel, MomentumData, Project, ProjectStep, Tag, BrainDumpEntry } from "@shared/schema";
 
@@ -23,7 +24,7 @@ interface AnchorWithStatus {
   active: boolean;
 }
 
-interface ProjectStepData {
+interface ProjectStepWithDescription {
   id: number;
   projectId: number;
   title: string;
@@ -33,6 +34,8 @@ interface ProjectStepData {
   sortOrder: number | null;
   completedAt: Date | null;
 }
+
+
 
 interface BrainDumpEntryData {
   id: number;
@@ -52,7 +55,7 @@ interface SanctuaryData {
   };
   anchors: AnchorWithStatus[];
   project: { id: number; name: string } | null;
-  projectSteps: ProjectStepData[];
+  projectSteps: ProjectStepWithDescription[];
   brainDumpEntries: BrainDumpEntryData[];
   momentum: MomentumData;
 }
@@ -69,23 +72,22 @@ export default function Dashboard() {
   const momentumRef = useRef<HTMLDivElement>(null);
   const reflectionRef = useRef<HTMLDivElement>(null);
 
-  const refs: Record<DeckView, React.RefObject<HTMLDivElement>> = {
-    gauge: gaugeRef,
-    anchor: anchorRef,
-    brain: brainRef,
-    construct: constructRef,
-    history: historyRef,
-    momentum: momentumRef,
-    reflection: reflectionRef,
-  };
-
   const handleViewChange = useCallback((view: DeckView) => {
     setCurrentView(view);
-    const ref = refs[view];
+    const refMap: Record<DeckView, React.RefObject<HTMLDivElement>> = {
+      gauge: gaugeRef,
+      anchor: anchorRef,
+      brain: brainRef,
+      construct: constructRef,
+      history: historyRef,
+      momentum: momentumRef,
+      reflection: reflectionRef,
+    };
+    const ref = refMap[view];
     if (ref.current) {
       ref.current.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-  }, []);
+  }, [gaugeRef, anchorRef, brainRef, constructRef, historyRef, momentumRef, reflectionRef]);
   
   const { data, isLoading, error } = useQuery<SanctuaryData>({
     queryKey: ["/api/sanctuary"],
@@ -209,37 +211,29 @@ export default function Dashboard() {
     },
   });
 
-  const handleEnergyChange = (level: EnergyLevel) => {
+  const handleEnergyChange = useCallback((level: EnergyLevel) => {
     logEnergyMutation.mutate(level);
-  };
+  }, [logEnergyMutation]);
 
-  const handleAnchorToggle = (id: number) => {
-    toggleAnchorMutation.mutate(id);
-  };
-
-  const handleStepToggle = (id: number) => {
-    toggleStepMutation.mutate(id);
-  };
-
-  const handleAddBrainDump = (text: string, category?: string, tagIds?: number[]) => {
+  const handleAddBrainDump = useCallback((text: string, category?: string, tagIds?: number[]) => {
     addBrainDumpMutation.mutate({ text, category, tagIds });
-  };
+  }, [addBrainDumpMutation]);
 
-  const handleDeleteBrainDump = (id: number) => {
+  const handleDeleteBrainDump = useCallback((id: number) => {
     deleteBrainDumpMutation.mutate(id);
-  };
+  }, [deleteBrainDumpMutation]);
 
-  const handleUpdateBrainDump = (id: number, updates: { tagIds?: number[]; category?: string }) => {
+  const handleUpdateBrainDump = useCallback((id: number, updates: { tagIds?: number[]; category?: string }) => {
     updateBrainDumpMutation.mutate({ id, updates });
-  };
+  }, [updateBrainDumpMutation]);
 
-  const handleArchiveBrainDump = (id: number) => {
+  const handleArchiveBrainDump = useCallback((id: number) => {
     archiveBrainDumpMutation.mutate(id);
-  };
+  }, [archiveBrainDumpMutation]);
 
-  const handleCreateTag = (name: string) => {
+  const handleCreateTag = useCallback((name: string) => {
     createTagMutation.mutate(name);
-  };
+  }, [createTagMutation]);
 
   if (isLoading) {
     return (
@@ -266,28 +260,34 @@ export default function Dashboard() {
     );
   }
 
-  const handleProjectChange = (projectId: number) => {
+  const handleProjectChange = useCallback((projectId: number) => {
     setActiveProjectId(projectId);
     queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "steps"] });
-  };
+  }, []);
 
-  const anchorsForComponent = data.anchors.map(a => ({
+  const anchorsForComponent = useMemo(() => data.anchors.map(a => ({
     id: a.id,
     label: a.label,
     active: a.active,
-  }));
+  })), [data.anchors]);
 
-  const stepsForComponent = (activeProjectId && projectSteps.length > 0 ? projectSteps : data.projectSteps).map(s => ({
-    id: s.id,
-    title: s.title,
-    description: (s as any).description || "",
-    completed: s.completed || false,
-    effort: (s.effort || "medium") as "quick" | "medium" | "heavy",
-  }));
+  const stepsForComponent = useMemo(() => {
+    const steps = activeProjectId && projectSteps.length > 0 ? projectSteps : data.projectSteps;
+    return steps.map((s: ProjectStepWithDescription | ProjectStep) => ({
+      id: s.id,
+      title: s.title,
+      description: (s as ProjectStepWithDescription).description || "",
+      completed: s.completed || false,
+      effort: (s.effort || "medium") as "quick" | "medium" | "heavy",
+    }));
+  }, [activeProjectId, projectSteps, data.projectSteps]);
 
-  const brainDumpEntriesFiltered = brainDumpEntries.length > 0 
-    ? brainDumpEntries.filter(e => !e.archivedAt)
-    : data.brainDumpEntries.filter(e => !(e as any).archivedAt);
+  const brainDumpEntriesFiltered = useMemo(() => {
+    if (brainDumpEntries.length > 0) {
+      return brainDumpEntries.filter(e => !e.archivedAt);
+    }
+    return data.brainDumpEntries.filter(e => !e.archivedAt);
+  }, [brainDumpEntries, data.brainDumpEntries]);
 
   return (
     <div className="min-h-screen bg-background selection:bg-cyan-500/30 overflow-x-hidden">
@@ -302,12 +302,14 @@ export default function Dashboard() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <VitalityGauge
-            energyLevel={data.energyState.level}
-            streak={data.energyState.streak}
-            onEnergyChange={handleEnergyChange}
-            isUpdating={logEnergyMutation.isPending}
-          />
+          <SectionErrorBoundary sectionName="Vitality Gauge">
+            <VitalityGauge
+              energyLevel={data.energyState.level}
+              streak={data.energyState.streak}
+              onEnergyChange={handleEnergyChange}
+              isUpdating={logEnergyMutation.isPending}
+            />
+          </SectionErrorBoundary>
         </motion.section>
 
         <motion.section
@@ -319,7 +321,9 @@ export default function Dashboard() {
           viewport={{ once: true, amount: 0.3 }}
           transition={{ duration: 0.5 }}
         >
-          <TheAnchor />
+          <SectionErrorBoundary sectionName="The Anchor">
+            <TheAnchor />
+          </SectionErrorBoundary>
         </motion.section>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-8">
@@ -331,15 +335,17 @@ export default function Dashboard() {
             viewport={{ once: true, amount: 0.3 }}
             transition={{ duration: 0.5 }}
           >
-            <BrainDump
-              entries={brainDumpEntriesFiltered}
-              tags={tags}
-              onAdd={handleAddBrainDump}
-              onDelete={handleDeleteBrainDump}
-              onUpdate={handleUpdateBrainDump}
-              onArchive={handleArchiveBrainDump}
-              onCreateTag={handleCreateTag}
-            />
+            <SectionErrorBoundary sectionName="Brain Dump">
+              <BrainDump
+                entries={brainDumpEntriesFiltered}
+                tags={tags}
+                onAdd={handleAddBrainDump}
+                onDelete={handleDeleteBrainDump}
+                onUpdate={handleUpdateBrainDump}
+                onArchive={handleArchiveBrainDump}
+                onCreateTag={handleCreateTag}
+              />
+            </SectionErrorBoundary>
           </motion.section>
 
           <motion.section
@@ -350,7 +356,9 @@ export default function Dashboard() {
             viewport={{ once: true, amount: 0.3 }}
             transition={{ duration: 0.5, delay: 0.1 }}
           >
-            <TheConstruct />
+            <SectionErrorBoundary sectionName="The Construct">
+              <TheConstruct />
+            </SectionErrorBoundary>
           </motion.section>
         </div>
 
@@ -363,7 +371,9 @@ export default function Dashboard() {
           viewport={{ once: true, amount: 0.3 }}
           transition={{ duration: 0.5 }}
         >
-          <EnergyHistory />
+          <SectionErrorBoundary sectionName="Energy History">
+            <EnergyHistory />
+          </SectionErrorBoundary>
         </motion.section>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-8">
@@ -375,7 +385,9 @@ export default function Dashboard() {
             viewport={{ once: true, amount: 0.3 }}
             transition={{ duration: 0.5 }}
           >
-            <MomentumWidget data={data.momentum} />
+            <SectionErrorBoundary sectionName="Momentum">
+              <MomentumWidget data={data.momentum} />
+            </SectionErrorBoundary>
           </motion.section>
 
           <motion.section
@@ -386,7 +398,9 @@ export default function Dashboard() {
             viewport={{ once: true, amount: 0.3 }}
             transition={{ duration: 0.5, delay: 0.1 }}
           >
-            <WeeklyReflections />
+            <SectionErrorBoundary sectionName="Weekly Reflections">
+              <WeeklyReflections />
+            </SectionErrorBoundary>
           </motion.section>
         </div>
 
